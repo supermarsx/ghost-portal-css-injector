@@ -1,0 +1,228 @@
+
+/* Introduction
+/* ------------
+
+This file is where you're supposed
+to do all your portal theming stuff,
+changing button, window handles,
+inputs, borders, etc.
+
+The base file as is makes your portal
+go dark mode :)
+
+This file should be placed under the
+theme assets/css folder and built
+afterwards.
+
+------------ */
+
+
+/* Contents
+/* ------------
+
+1. Variables
+2. Powered tag
+3. Subscribe/Account, bottom right buttons
+4. Popup container
+5. Popup inputs
+
+------------ */
+
+/* 1. Variables
+/* ------------------------------------------------ */
+:root {
+    --color-base: #fdfdfd;
+    --color-background: #151515;
+    --color-faded-1: #c9c9c9;
+    --color-faded-2: #777777;
+    --color-dark-1: #202020;
+    --color-dark-2: #454545;
+    --color-light-1: #aeaeae;
+    --color-alt-1: transparent;
+    --border-radius-generic: 2px;
+}
+
+/* 2. Powered tag
+/* ------------------------------------------------ */
+
+/* Ghost CMS powered tag */
+.gh-portal-powered {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* 3. Subscribe/Account, bottom right buttons
+/* ------------------------------------------------ */
+
+/* Subscribe and account buttons, bottom right element */
+div.gh-portal-triggerbtn-container {
+    border-radius: var(--border-radius-generic);
+    height: 50px;
+    background-color: var(--brandcolor);
+    transition: all 1s cubic-bezier(0.075, 0.82, 0.165, 1);
+    border: 1px solid var(--color-alt-1);
+}
+
+/* Subscribe and account buttons, on hover, bottom right elements */
+div.gh-portal-triggerbtn-container:hover {
+    color: var(--color-faded-1);
+    background-color: var(--color-dark-1);
+    border: 1px solid var(--color-faded-2);
+}
+
+/* Subscribe and account buttons, disable overlay override */
+div.gh-portal-triggerbtn-container::before {
+    top: unset;
+    right: unset;
+    bottom: unset;
+    left: unset;
+    border: unset;
+    border-radius: unset;
+}
+
+/* Account button */
+div.gh-portal-triggerbtn-container.halo::before {
+    top: unset;
+    right: unset;
+    bottom: unset;
+    left: unset;
+    border-radius: unset;
+    border: 1px solid transparent;
+}
+
+
+/* 4. Popup container
+/* ------------------------------------------------ */
+
+/* Popup container */
+div.gh-portal-popup-container,
+div.gh-portal-list {
+    background-color: var(--color-background);
+    border-radius: var(--border-radius-generic);
+}
+
+/* Titles */
+h1.gh-portal-main-title,
+h2.gh-portal-main-title {
+    color: var(--color-base);
+}
+
+/* Signup message */
+div.gh-portal-signup-message {
+    color: var(--color-base);
+}
+
+/* Login/subscribe button */
+button.gh-portal-btn,
+.account-home > a.gh-portal-btn {
+    border-radius: var(--border-radius-generic);
+    background-color: var(--color-alt-1);
+    border: 1px solid var(--color-faded-2);
+    color: var(--color-base);
+}
+
+/* Portal link */
+.gh-portal-btn.gh-portal-btn-link {
+    border: unset;
+    font-weight: 300;
+}
+
+
+/* Portal signin button */
+.gh-portal-btn.gh-portal-btn-main.gh-portal-btn-primary {
+    border: unset;
+}
+
+/* 5. Popup inputs
+/* ------------------------------------------------ */
+
+/* Input */
+input.gh-portal-input {
+    border-radius:  2px;
+    border: 1px solid var(--color-dark-2);
+    caret-color: var(--color-light-1);
+    color: var(--color-light-1);
+}
+
+/* Input on focus */
+input.gh-portal-input:focus {
+	border: 1px solid #aeaeae;
+    color: var(--color-faded-1);
+}
+
+/* Input placeholder */
+input.gh-portal-input::placeholder {
+    color: var(--color-faded-2);
+}
+
+/* 6. Popup titles
+
+/* Portal account detail title */
+.gh-portal-list-detail > h3 {
+    color: var(--color-faded-1);
+}
+
+/* Account details list */
+div.gh-portal-list {
+    border: 1px solid var(--color-dark-2);
+}
+
+/* Account details list, section item */
+div.gh-portal-list section {
+    border-bottom: 1px solid var(--color-dark-2);
+}
+
+/* Account details list, buttons */
+.gh-portal-btn.gh-portal-btn-list {
+	border: none;
+}
+
+/* Account details list, buttons hover */
+.gh-portal-btn.gh-portal-btn-list:hover {
+	text-decoration: underline;
+}
+
+/* Account details, contact support button */
+.gh-portal-btn.gh-portal-btn-branded {
+	background: transparent;
+	color: var(--color-faded-1);
+	border-radius: var(--border-radius-generic);
+	border: 1px solid var(--color-dark-2);
+	font-weight: 300;
+}
+
+/* Sign up link */
+button.gh-portal-btn-link > span {
+    color: var(--color-faded-1);
+    text-decoration: underline;
+}
+
+/* Input label */
+label.gh-portal-input-label {
+    color: var(--color-faded-1);
+}
+
+/* Icon */
+svg.gh-portal-icon {
+    color: var(--color-faded-1);
+}
+
+/* Invite only */
+p.gh-portal-invite-only-notification {
+    color: var(--color-base);
+}
+
+/* Account details icon */
+#Regular {
+    height: 30px !important;
+    color: var(--color-base) !important;
+}
+
+/* X. Portal preview 
+/* ------------------------------------------------ */
+
+/* Portal preview background */
+div.gh-portal-popup-background.preview {
+	background: linear-gradient(45deg, #1c1c1c, #1e1e1e);
+}
