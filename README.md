@@ -1,4 +1,4 @@
-# Ghost CMS portal css injector
+# Ghost CMS portal CSS injector
 
 Portal stylesheet injector for Ghost CMS
 
