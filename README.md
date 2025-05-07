@@ -47,7 +47,7 @@ To start using the injector you need to download or clone this repository and pl
 
 [`portal.css`](https://github.com/supermarsx/ghost-portal-css-injector/blob/main/injector/portal.css) is the main portal stylesheet that you use to override default styles.
 
-[`style-injection.js`](https://github.com/supermarsx/ghost-portal-css-injector/blob/main/injector/style-injection.css) is the main script that injects stylesheets and does all the other magic stuff.
+[`style-injection.js`](https://github.com/supermarsx/ghost-portal-css-injector/blob/main/injector/style-injection.js) is the main script that injects stylesheets and does all the other magic stuff.
 
 After placing those files in their respective locations you should open each one and read them to adapt the injection to your specific needs.
 
