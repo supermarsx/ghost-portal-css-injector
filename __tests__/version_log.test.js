@@ -30,6 +30,28 @@ describe('Version and Log utilities', () => {
         expect(injector.version.getFirst()).toBe('abc123');
     });
 
+    test('version.getAllFromHead should read script src version', () => {
+        const script = document.createElement('script');
+        script.src = '/assets/built/portal.js?v=def456';
+        document.head.appendChild(script);
+        const versioned = injector.version.getAllFromHead();
+        expect(Array.isArray(versioned)).toBe(true);
+        expect(versioned[0].urlVersion).toBe('def456');
+        expect(injector.version.getFirst()).toBe('def456');
+    });
+
+    test('version.getAllFromHead should read style href version', () => {
+        const style = document.createElement('style');
+        style.href = '/assets/built/portal-style.css?v=ghi789';
+        // JSDOM doesn't normally expose href on style, but we can set directly for testing
+        Object.defineProperty(style, 'href', { value: '/assets/built/portal-style.css?v=ghi789', writable: true });
+        document.head.appendChild(style);
+        const versioned = injector.version.getAllFromHead();
+        expect(Array.isArray(versioned)).toBe(true);
+        expect(versioned[0].urlVersion).toBe('ghi789');
+        expect(injector.version.getFirst()).toBe('ghi789');
+    });
+
     test('version.getAllFromHead should throw if no versioned link present', () => {
         document.head.innerHTML = '';
         expect(() => injector.version.getAllFromHead()).toThrow();

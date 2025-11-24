@@ -154,6 +154,34 @@ describe('Coverage extra tests for uncovered branches', () => {
         expect(config.observer.tempObservers.length).toBe(0);
     });
 
+    test('waitAll handles observe throwing and rejects with clear error', async () => {
+        // Arrange: create a single element so count is not satisfied and waitAll will call observe
+        const testSelector = '.will-not-satisfy-observe-throws';
+        const div = document.createElement('div');
+        div.className = testSelector.replace('.', '');
+        document.body.appendChild(div);
+
+        // Save original MutationObserver to restore in afterEach
+        global.__originalMutationObserver = global.MutationObserver;
+        class ObserverThrows {
+            constructor(cb) {
+                this.cb = cb;
+            }
+            observe() {
+                throw new Error('observe failed');
+            }
+            disconnect() {
+                void 0;
+            }
+        }
+        global.MutationObserver = ObserverThrows;
+
+        // Act & Assert
+        await expect(
+            element.waitAll({ selector: testSelector, count: 2, timeout: 500, mode: 1 }),
+        ).rejects.toThrow('Failed to wait for all elements.');
+    });
+
     test('observer.setup calls inject.everything when new iframe added and mutation type is configured', async () => {
         config.observer.mutation = 'childList';
         // create root element

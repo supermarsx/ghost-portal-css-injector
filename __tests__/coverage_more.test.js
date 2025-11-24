@@ -52,7 +52,7 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         const origGetAll = element.getAll;
         jest.spyOn(element, 'getAll').mockImplementation(({ selector: _selector } = {}) => {
             called++;
-            if (called === 1) return document.querySelectorAll(selector);
+            if (called === 1) return document.querySelectorAll(_selector);
             throw new Error('Simulated getAll failure');
         });
         const origMO = global.MutationObserver;
@@ -61,7 +61,8 @@ describe('Coverage extra paths (error branches & autostart)', () => {
                 this.cb = cb;
             }
             observe() {
-                setTimeout(() => this.cb([]), 0);
+                // Use an actual mutation object so the callback will execute element.getAll inside
+                setTimeout(() => this.cb([{ type: 'childList', addedNodes: [], removedNodes: [] }]), 0);
             }
             disconnect() {
                 void 0;
@@ -69,9 +70,15 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         }
         global.MutationObserver = FakeObserverCallAll;
         config.defaults.element.timeout = 100;
+        const logSpy = jest.spyOn(console, 'log');
         await expect(
-            element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 })
+            element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 }),
         ).rejects.toBeDefined();
+        // Ensure getAll was called multiple times (initial + inside callback)
+        expect(called).toBeGreaterThanOrEqual(2);
+        const matched = logSpy.mock.calls.some((call) => String(call[0]).includes('MutationObserver callback failed'));
+        expect(matched).toBeTruthy();
+        logSpy.mockRestore();
         global.MutationObserver = origMO;
         element.getAll = origGetAll;
     });
@@ -164,5 +171,49 @@ describe('Coverage extra paths (error branches & autostart)', () => {
             document.head.innerHTML = backupHead;
             addEventSpy.mockRestore();
         }
+    });
+
+    test('log constructor respects config flags and string transformations', () => {
+        const origEnabled = config.log.enabled;
+        const origShutdown = config._shutdown;
+        const logSpy = jest.spyOn(console, 'log');
+        // When logging disabled, the constructor should not write to console
+        config.log.enabled = false;
+        new injector.log({ message: 'Should not log', level: 'info' });
+        expect(logSpy).not.toHaveBeenCalled();
+
+        // When shutdown is set, the constructor should not write to console
+        config.log.enabled = true;
+        config._shutdown = true;
+        new injector.log({ message: 'Should not log either', level: 'info' });
+        expect(logSpy).not.toHaveBeenCalled();
+
+        // Reset for further tests
+        config._shutdown = false;
+        // Use a level allowed by log level default so logs happen
+        config.log.level = 'info';
+        new injector.log({ message: 'Should log', level: 'info' });
+        expect(logSpy).toHaveBeenCalled();
+        logSpy.mockRestore();
+        config.log.enabled = origEnabled;
+        config._shutdown = origShutdown;
+    });
+
+    test('log.setLogLevel warns on invalid level and sets on valid', () => {
+        const warnSpy = jest.spyOn(console, 'warn');
+        const origLevel = config.log.level;
+        injector.log.setLogLevel({ level: 'invalid-level' });
+        expect(warnSpy).toHaveBeenCalled();
+        injector.log.setLogLevel({ level: 'warning' });
+        expect(config.log.level).toEqual('warning');
+        warnSpy.mockRestore();
+        config.log.level = origLevel;
+    });
+
+    test('log helper formatting and sanitization works', () => {
+        expect(injector.log.sanitizeLogLevelString({ level: '    INFO ' })).toEqual('info');
+        expect(injector.log.transformLogLevelString({ level: 'info' })).toEqual('INF');
+        const msg = injector.log.getLogMessageString({ message: 'hello', level: 'info' });
+        expect(typeof msg).toBe('string');
     });
 });
