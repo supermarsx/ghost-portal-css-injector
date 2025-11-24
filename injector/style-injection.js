@@ -656,11 +656,15 @@ class element {
             const elementObject = element.get({ selector });
             if (elementObject instanceof Element) resolve(elementObject);
             const observer = new MutationObserver(function () {
-                const elementObject = element.get({ selector });
-                if (elementObject instanceof Element) {
-                    observer.disconnect();
-                    clearTimeout(timeoutChecker);
-                    resolve(elementObject);
+                try {
+                    const elementObject = element.get({ selector });
+                    if (elementObject instanceof Element) {
+                        observer.disconnect();
+                        clearTimeout(timeoutChecker);
+                        resolve(elementObject);
+                    }
+                } catch (error) {
+                    _logProxy({ message: `MutationObserver callback failed: ${error}`, level: 'error' });
                 }
             });
             const options = {
@@ -712,35 +716,39 @@ class element {
                 }
                 let timeoutChecker = null;
                 const observer = new MutationObserver(function () {
-                    const elementCollectionObject = element.getAll({ selector });
-                    switch (mode) {
-                        case 1: // More than or equal
-                            if (
-                                elementCollectionObject instanceof NodeList &&
-                                elementCollectionObject.length >= count
-                            ) {
-                                clearTimeout(timeoutChecker);
-                                resolve(elementCollectionObject);
-                            }
-                            break;
-                        case 2: // Less than or equal
-                            if (
-                                elementCollectionObject instanceof NodeList &&
-                                elementCollectionObject.length <= count
-                            ) {
-                                clearTimeout(timeoutChecker);
-                                resolve(elementCollectionObject);
-                            }
-                            break;
-                        default: // Equal, 0 or other values
-                            if (
-                                elementCollectionObject instanceof NodeList &&
-                                elementCollectionObject.length === count
-                            ) {
-                                clearTimeout(timeoutChecker);
-                                resolve(elementCollectionObject);
-                            }
-                            break;
+                    try {
+                        const elementCollectionObject = element.getAll({ selector });
+                        switch (mode) {
+                            case 1: // More than or equal
+                                if (
+                                    elementCollectionObject instanceof NodeList &&
+                                    elementCollectionObject.length >= count
+                                ) {
+                                    clearTimeout(timeoutChecker);
+                                    resolve(elementCollectionObject);
+                                }
+                                break;
+                            case 2: // Less than or equal
+                                if (
+                                    elementCollectionObject instanceof NodeList &&
+                                    elementCollectionObject.length <= count
+                                ) {
+                                    clearTimeout(timeoutChecker);
+                                    resolve(elementCollectionObject);
+                                }
+                                break;
+                            default: // Equal, 0 or other values
+                                if (
+                                    elementCollectionObject instanceof NodeList &&
+                                    elementCollectionObject.length === count
+                                ) {
+                                    clearTimeout(timeoutChecker);
+                                    resolve(elementCollectionObject);
+                                }
+                                break;
+                        }
+                    } catch (error) {
+                        _logProxy({ message: `MutationObserver callback failed: ${error}`, level: 'error' });
                     }
                 });
                 const options = {
@@ -1187,29 +1195,34 @@ class observer {
             }
 
             const mutationObserver = new MutationObserver(function (mutationsList) {
-                /* Iterate over all mutations */
-                for (const mutation of mutationsList) {
-                    const targetMutationType = config.observer.mutation;
-                    if (mutation.type === targetMutationType) {
-                        /* Check if new iframe is added */
-                        mutation.addedNodes.forEach(function (node) {
-                            if (node.tagName === TAGS.iframe) {
-                                inject.everything({ iframe: node });
-                            }
-                        });
+                try {
+                    /* Iterate over all mutations */
+                    for (const mutation of mutationsList) {
+                        const targetMutationType = config.observer.mutation;
+                        if (mutation.type === targetMutationType) {
+                            /* Check if new iframe is added */
+                            mutation.addedNodes.forEach(function (node) {
+                                if (node.tagName === TAGS.iframe) {
+                                    inject.everything({ iframe: node });
+                                }
+                            });
 
-                        /* Check if an iframe is removed */
-                        mutation.removedNodes.forEach(function (node) {
-                            if (node.tagName === TAGS.iframe) _logProxy({ message: 'Iframe removed', level: 'info' });
+                            /* Check if an iframe is removed */
+                            mutation.removedNodes.forEach(function (node) {
+                                if (node.tagName === TAGS.iframe) {
+                                    _logProxy({ message: 'Iframe removed', level: 'info' });
+                                }
+                            });
+                        }
+                        const iframes = element.getAllIframes();
+                        iframes.forEach(function (iframe) {
+                            inject.everything({ iframe });
                         });
                     }
-                    const iframes = element.getAllIframes();
-                    iframes.forEach(function (iframe) {
-                        inject.everything({ iframe });
-                    });
+                } catch (error) {
+                    _logProxy({ message: `MutationObserver callback failed: ${error}`, level: 'error' });
                 }
             });
-
             _logProxy({ message: 'Configuring observer', level: 'info' });
 
             /* Configure the observer to watch for changes within #ghost-portal-root */
