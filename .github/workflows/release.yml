@@ -24,6 +24,14 @@ jobs:
               id: vars
               run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+            - name: Get package version
+              id: version
+              run: |
+                  version=$(node -p "require('./package.json').version") || echo "version="
+                  # Remove leading v if present
+                  version_no_v=${version#v}
+                  echo "version=${version_no_v}" >> $GITHUB_OUTPUT
+
             - name: Check for code changes
               id: changes
               uses: dorny/paths-filter@v2
@@ -39,12 +47,17 @@ jobs:
             - name: Create tag and push
               if: ${{ steps.changes.outputs.code == 'true' }}
               env:
-                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
-                  git push origin --tags || echo "tags push failed"
+                # Ensure tag does not have leading v; strip if needed
+                local_tag=${TAG_NAME#v}
+                git tag -a ${local_tag} -m "Release ${local_tag}" || echo "tag exists"
+                # set or update latest tag to point to this commit
+                  git tag -f latest ${local_tag} || true
+                git push origin --tags || echo "tags push failed"
+                git push --force origin latest || true
 
             - name: Download coverage artifact
               if: ${{ steps.changes.outputs.code == 'true' }}
@@ -128,10 +141,10 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: v${{ steps.vars.outputs.short_sha }}
-                  release_name: Release v${{ steps.vars.outputs.short_sha }}
+                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  release_name: Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
                   body: |-
-                      Auto-generated release from workflow. Short commit v${{ steps.vars.outputs.short_sha }}.
+                      Auto-generated release from workflow. Tag ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false
                   prerelease: false
 

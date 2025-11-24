@@ -45,4 +45,13 @@ describe('Version and Log utilities', () => {
         expect(injector.log.sanitizeLogLevelString({ level: 'INFO' })).toBe('info');
         expect(injector.log.transformLogLevelString({ level: 'warning' })).toBe('WAR');
     });
+
+    test('log.getLogMessageString and getTimestamp formatting', () => {
+        injector.config.log.date.iso = true;
+        const ts = injector.log.getTimestamp();
+        expect(ts).toMatch(/^[0-9\-T:.Z]+$/);
+        const msg = injector.log.getLogMessageString({ message: 'hello', level: 'info' });
+        expect(msg).toContain('%c[');
+        expect(msg).toContain(']:');
+    });
 });

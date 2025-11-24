@@ -70,6 +70,88 @@ describe('Element utilities - additional tests', () => {
         expect(() => injector.element.cloneAll({ elementHandleCollection: null })).toThrow();
     });
 
+    test('element.get throws when passed empty selector and getAll throws on empty selector', () => {
+        expect(() => injector.element.get({ selector: '' })).toThrow();
+        expect(() => injector.element.getAll({ selector: '' })).toThrow();
+    });
+
+    test('element.get and getAll delegates to wait/waitAll when wait flags passed', async () => {
+        // Spy on wait and waitAll
+        const waitSpy = jest.spyOn(injector.element, 'wait').mockImplementation(() => Promise.resolve(document.createElement('div')));
+        const waitAllSpy = jest.spyOn(injector.element, 'waitAll').mockImplementation(() => Promise.resolve(document.querySelectorAll('div')));
+
+        await injector.element.get({ selector: '#will-appear', wait: true });
+        await injector.element.getAll({ selector: '.will-appear', wait: true, count: 1 });
+
+        expect(waitSpy).toHaveBeenCalled();
+        expect(waitAllSpy).toHaveBeenCalled();
+
+        waitSpy.mockRestore();
+        waitAllSpy.mockRestore();
+    });
+
+    test('element.getAllInsideIframe throws when iframe or doc missing', () => {
+        expect(() => injector.element.getAllInsideIframe({ iframe: undefined, selector: '.x' })).toThrow();
+    });
+
+    test('log.setLogLevel invalid value warns & resets to info', () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        injector.config.log.level = 'info';
+        injector.log.setLogLevel({ level: 'invalid' });
+        expect(injector.config.log.level).toBe('info');
+        expect(warnSpy).toHaveBeenCalled();
+        warnSpy.mockRestore();
+    });
+
+    test('element.waitAll rejects on timeout for non-appearing selector', async () => {
+        injector.config.defaults.element.timeout = 50;
+        await expect(injector.element.waitAll({ selector: '#never-appears', count: 1, timeout: 100 })).rejects.toMatch(/Timed out waiting for all the elements/);
+    });
+
+    test('inject.firstTime.linkElement and fontElementCollection return early when flags disabled', async () => {
+        // Setup env so link build is present
+        const versioned = document.createElement('link');
+        versioned.rel = 'stylesheet';
+        versioned.href = '/assets/built/portal.css?v=abc';
+        document.head.appendChild(versioned);
+        await injector.onload.initialSetup();
+
+        const spyLink = jest.spyOn(injector.inject.iframeCollection, 'linkElement');
+        const spyFont = jest.spyOn(injector.inject.iframeCollection, 'fontElementCollection');
+
+        injector.config.inject.firstTime.enabled = false;
+        injector.inject.firstTime.linkElement();
+        injector.inject.firstTime.fontElementCollection();
+        expect(spyLink).not.toHaveBeenCalled();
+        expect(spyFont).not.toHaveBeenCalled();
+
+        injector.config.inject.firstTime.enabled = true; // restore
+        spyLink.mockRestore();
+        spyFont.mockRestore();
+    });
+
+    test('inject.linkElement and inject.fontElementCollection return early when injection disabled', async () => {
+        const versioned = document.createElement('link');
+        versioned.rel = 'stylesheet';
+        versioned.href = '/assets/built/portal.css?v=abc';
+        document.head.appendChild(versioned);
+        await injector.onload.initialSetup();
+
+        const iframe = document.createElement('iframe');
+        document.body.appendChild(iframe);
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.head.innerHTML = '';
+
+        const appendSpy = jest.spyOn(iframeDoc.head, 'appendChild');
+
+        injector.config.inject.enabled = false;
+        injector.inject.linkElement({ iframe });
+        injector.inject.fontElementCollection({ iframe });
+        expect(appendSpy).not.toHaveBeenCalled();
+        appendSpy.mockRestore();
+        injector.config.inject.enabled = true;
+    });
+
     test('element.create.link produces valid attributes and uses version from head', async () => {
         const versioned = document.createElement('link');
         versioned.rel = 'stylesheet';

@@ -295,7 +295,13 @@ class log {
     }
 }
 
-/* Log function proxy, avoid needing to use new keyword when calling the log constructor */
+/**
+ * Log function proxy, avoid needing to use the `new` keyword when calling
+ * the `log` constructor. This proxy provides the same call signature as
+ * `new log({...})` but allows people to simply call `_logProxy({...})`.
+ *
+ * Example: _logProxy({ message: 'Hi', level: 'info' });
+ */
 const _logProxy = new Proxy(log, {
     apply(target, thisArg, argumentsList) {
         return new target(...argumentsList);
@@ -571,7 +577,10 @@ class element {
         }
     }
 
-    /* Get portal iframe count */
+    /**
+     * Get portal iframe count using configured selector
+     * @returns {number} Count of portal iframes found with the configured selector
+     */
     static countIframes() {
         try {
             const iframeSelector = config.selector.iframes;
@@ -585,7 +594,10 @@ class element {
         }
     }
 
-    /* Get font elements count */
+    /**
+     * Get font elements count using the configured fonts selector
+     * @returns {number} Count of font elements found
+     */
     static countFonts() {
         try {
             const fontsSelector = config.selector.fonts;
@@ -1028,7 +1040,7 @@ class inject {
                 const currentDate = Date.now();
 
                 if (
-                    inject.check.areFontsInjected({ iframe, fontCount: config.selector.fontCount }) &&
+                    inject.check.areFontsInjected({ iframe, fontCount: fontCount }) &&
                     currentDate > config.watcher.timer.end
                 ) {
                     _logProxy({
@@ -1391,16 +1403,32 @@ class onload {
     }
 }
 
-/* Self executing anonymous function that injects portal styles on window load event, makes the magic happen */
-/* Only auto-run when in a real browser environment (window/document available and not running as a CommonJS module) */
-if (
-    typeof window !== 'undefined' &&
-    typeof document !== 'undefined' &&
-    !(typeof module !== 'undefined' && module.exports)
-) {
-    onload.initialSetup();
-    onload.setupEvent();
+/* Autostart helper that injects portal styles on window load event and makes the magic happen.
+ * This helper allows us to run the autostart logic from tests by passing { force: true }
+ * while keeping the original behavior (only run in browser context) unchanged.
+ */
+/**
+ * Attempt to run autostart logic (initial setup and register onload event).
+ * In normal usage this runs automatically in a browser-like environment, but
+ * tests can force execution by passing { force: true }.
+ * @param {Object} options - Options object
+ * @param {boolean} options.force - Force autostart even if running under CommonJS
+ * @returns {Promise<void>} Promise resolving once the initial setup completes
+ */
+async function autostart({ force = false } = {}) {
+    if (
+        force ||
+        (typeof window !== 'undefined' &&
+            typeof document !== 'undefined' &&
+            !(typeof module !== 'undefined' && module.exports))
+    ) {
+        await onload.initialSetup();
+        onload.setupEvent();
+    }
 }
+
+// Execute autostart by default, behavior preserved for browser-like contexts.
+autostart();
 
 /* Export classes and config for testing when required in Node */
 if (typeof module !== 'undefined' && module.exports) {
@@ -1419,8 +1447,15 @@ if (typeof module !== 'undefined' && module.exports) {
             return builtFontElementCollection;
         },
         watcher,
+        // Expose autostart for test runs so the autostart logic can be forced under Node
+        autostart,
         /**
          * Clear all running watchers, observers and temporary observers. Useful for test teardown.
+         *
+         * This method sets the internal `_shutdown` flag while performing cleanup
+         * so that logging is disabled during teardown and no async callbacks
+         * produce noisy logs or throw after tests terminate.
+         *
          * @returns {void}
          */
         clearAll: function () {

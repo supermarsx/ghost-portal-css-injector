@@ -98,6 +98,18 @@ jobs:
             - name: Get short commit hash
               id: vars
               run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            - name: Get package version
+              id: version
+              run: |
+                  version=$(node -p "require('./package.json').version") || echo "version="
+                  version_no_v=${version#v}
+                  echo "version=${version_no_v}" >> $GITHUB_OUTPUT
+            - name: Get package version
+              id: version
+              run: |
+                  version=$(node -p "require('./package.json').version") || echo "version="
+                  version_no_v=${version#v}
+                  echo "version=${version_no_v}" >> $GITHUB_OUTPUT
             - name: Check for code changes
               id: changes
               uses: dorny/paths-filter@v2
@@ -113,12 +125,15 @@ jobs:
             - name: Create tag and push
               if: steps.changes.outputs.code == 'true'
               env:
-                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+                local_tag=${TAG_NAME#v}
+                git tag -a ${local_tag} -m "Release ${local_tag}" || echo "tag exists"
+                    git tag -f latest ${local_tag} || true
                   git push origin --tags || echo "tags push failed"
+                git push --force origin latest || true
             - name: Download coverage-report artifact
               if: steps.changes.outputs.code == 'true'
               uses: actions/download-artifact@v4
@@ -162,10 +177,10 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: v${{ steps.vars.outputs.short_sha }}
-                  release_name: Release v${{ steps.vars.outputs.short_sha }}
+                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  release_name: Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
                   body: |-
-                      Auto-generated release from workflow. Short commit v${{ steps.vars.outputs.short_sha }}.
+                    Auto-generated release from workflow. Tag: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false
                   prerelease: false
             - name: Upload package to release
@@ -198,21 +213,24 @@ jobs:
               run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
             - name: Create tag and push
               env:
-                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+                  local_tag=${TAG_NAME#v}
+                  git tag -a ${local_tag} -m "Release ${local_tag}" || echo "tag exists"
+                    git tag -f latest ${local_tag} || true
                   git push origin --tags || echo "tags push failed"
+                  git push --force origin latest || true
             - name: Create GitHub release
               uses: actions/create-release@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: v${{ steps.vars.outputs.short_sha }}
-                  release_name: Manual release v${{ steps.vars.outputs.short_sha }}
+                with:
+                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  release_name: Manual release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
                   body: |-
-                      Manual release triggered via workflow_dispatch. Short commit: v${{ steps.vars.outputs.short_sha }}.
+                    Manual release triggered via workflow_dispatch. Tag: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false
                   prerelease: false
             - name: Upload package to release

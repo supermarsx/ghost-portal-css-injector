@@ -112,7 +112,7 @@ This repository contains several GitHub Actions workflows (see `.github/workflow
 - `package` — creates an `npm pack` artifact
 - `release` — creates an automatic GitHub release whenever a commit is pushed to `main`.
 
-The release job tags the current commit with the short SHA tag format `v<short_sha>` (example: `v1a2b3c`) and creates a GitHub release with the packaged artifact attached.
+The release job tags the current commit with a tag matching the `version` from `package.json` (or a short SHA fallback) and creates a GitHub release; tag names no longer include a leading `v`. The workflow also sets/updates a `latest` tag that points to the most recent release.
 
 Automatic release behavior
 
@@ -134,7 +134,8 @@ If you'd like to manually create a release locally, you can run:
 
 ```bash
 # create a tag with the short commit
-git tag -a v$(git rev-parse --short HEAD) -m "Release"
+# Use the package.json version or a short SHA as tag name; avoid a leading 'v'
+git tag -a $(git rev-parse --short HEAD) -m "Release"
 git push origin --tags
 ```
 
