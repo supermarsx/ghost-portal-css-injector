@@ -111,6 +111,8 @@ const config = {
             childList: true, // Watch for added or removed nodes?
             subtree: true, // Watch the entire subtree of #ghost-portal-root element ID?
         },
+        current: null, // Current MutationObserver instance if running
+        tempObservers: [], // Temporary observers created by wait/waitAll helpers
     },
     watcher: {
         enabled: true, // Watcher enabled? (Guarantees that injection is kept in place after the first injection)
@@ -143,6 +145,8 @@ const config = {
         throwOnUndefinedIFrameFontInjection: true, // Throw error when font element collection injection fails due to undefined iframe?
     },
     /* Default section, probably shouldn't need changes, only under special circunstances */
+    /* Internal shutdown flag to prevent logging once the test runner has torn down */
+    _shutdown: false,
     defaults: {
         log: {
             message: '', // Default log message
@@ -206,6 +210,7 @@ class log {
      */
     constructor({ message = log.default.message, level = log.default.level }) {
         if (!config.log.enabled) return;
+        if (config._shutdown) return; // prevent logging after shutdown/cleanup
         const logLevel = log.getLogLevel({ level });
 
         // Check if the current log level allows this message
@@ -659,7 +664,14 @@ class element {
                 try {
                     const elementObject = element.get({ selector });
                     if (elementObject instanceof Element) {
-                        observer.disconnect();
+                        try {
+                            observer.disconnect();
+                        } catch (err) {
+                            /* noop */
+                        }
+                        // remove observer from temporary list
+                        const idx = config.observer.tempObservers.indexOf(observer);
+                        if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                         clearTimeout(timeoutChecker);
                         resolve(elementObject);
                     }
@@ -673,8 +685,16 @@ class element {
             };
             const target = document.body;
             observer.observe(target, options);
+            // track temporary observer so it can be cleared during test teardown
+            if (Array.isArray(config.observer.tempObservers)) config.observer.tempObservers.push(observer);
             const timeoutChecker = setTimeout(function () {
-                observer.disconnect();
+                try {
+                    observer.disconnect();
+                } catch (err) {
+                    /* noop */
+                }
+                const idx = config.observer.tempObservers.indexOf(observer);
+                if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                 const message = 'Timed out waiting for element.';
                 _logProxy({ message: `${message}`, level: 'warning' });
                 reject(message);
@@ -724,6 +744,13 @@ class element {
                                     elementCollectionObject instanceof NodeList &&
                                     elementCollectionObject.length >= count
                                 ) {
+                                    try {
+                                        observer.disconnect();
+                                    } catch (err) {
+                                        /* noop */
+                                    }
+                                    const idx = config.observer.tempObservers.indexOf(observer);
+                                    if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                                     clearTimeout(timeoutChecker);
                                     resolve(elementCollectionObject);
                                 }
@@ -733,6 +760,13 @@ class element {
                                     elementCollectionObject instanceof NodeList &&
                                     elementCollectionObject.length <= count
                                 ) {
+                                    try {
+                                        observer.disconnect();
+                                    } catch (err) {
+                                        /* noop */
+                                    }
+                                    const idx = config.observer.tempObservers.indexOf(observer);
+                                    if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                                     clearTimeout(timeoutChecker);
                                     resolve(elementCollectionObject);
                                 }
@@ -742,6 +776,13 @@ class element {
                                     elementCollectionObject instanceof NodeList &&
                                     elementCollectionObject.length === count
                                 ) {
+                                    try {
+                                        observer.disconnect();
+                                    } catch (err) {
+                                        /* noop */
+                                    }
+                                    const idx = config.observer.tempObservers.indexOf(observer);
+                                    if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                                     clearTimeout(timeoutChecker);
                                     resolve(elementCollectionObject);
                                 }
@@ -757,8 +798,15 @@ class element {
                 };
                 const target = document.body;
                 observer.observe(target, options);
+                if (Array.isArray(config.observer.tempObservers)) config.observer.tempObservers.push(observer);
                 timeoutChecker = setTimeout(function () {
-                    observer.disconnect();
+                    try {
+                        observer.disconnect();
+                    } catch (err) {
+                        /* noop */
+                    }
+                    const idx = config.observer.tempObservers.indexOf(observer);
+                    if (idx !== -1) config.observer.tempObservers.splice(idx, 1);
                     const message = 'Timed out waiting for all the elements';
                     _logProxy({ message: `${message}`, level: 'warning' });
                     reject(message);
@@ -1194,7 +1242,8 @@ class observer {
                 throw new Error(message);
             }
 
-            const mutationObserver = new MutationObserver(function (mutationsList) {
+            /* Persist the current observer so it can be cleared later */
+            config.observer.current = new MutationObserver(function (mutationsList) {
                 try {
                     /* Iterate over all mutations */
                     for (const mutation of mutationsList) {
@@ -1226,7 +1275,7 @@ class observer {
             _logProxy({ message: 'Configuring observer', level: 'info' });
 
             /* Configure the observer to watch for changes within #ghost-portal-root */
-            mutationObserver.observe(rootElement, config.observer.initialization);
+            config.observer.current.observe(rootElement, config.observer.initialization);
 
             _logProxy({ message: `Mutation observer was setup to watch for iframes in ${rootElement}`, level: 'info' });
         } catch (error) {
@@ -1235,6 +1284,44 @@ class observer {
             _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             throw new Error(message, cause);
         }
+    }
+
+    /**
+     * Disconnect the current mutation observer and clear the stored reference.
+     * This is intended for tests and manual shutdowns so async callbacks
+     * do not run after the environment is torn down.
+     * @returns {void}
+     */
+    static clear() {
+        // Prevent any new logs while we are cleaning up.
+        config._shutdown = true;
+        if (config.observer.current && typeof config.observer.current.disconnect === 'function') {
+            try {
+                config.observer.current.disconnect();
+            } catch (err) {
+                _logProxy({ message: `Failed to disconnect observer: ${err}`, level: 'warning' });
+            }
+        }
+        // Disconnect temporary observers created by `wait` / `waitAll`.
+        if (Array.isArray(config.observer.tempObservers)) {
+            for (const obs of config.observer.tempObservers.slice()) {
+                try {
+                    if (obs && typeof obs.disconnect === 'function') obs.disconnect();
+                } catch (err) {
+                    /* ignore */
+                }
+            }
+            config.observer.tempObservers.length = 0;
+        }
+        config.observer.current = null;
+        // Clear watcher as part of cleanup
+        try {
+            watcher.clear();
+        } catch (err) {
+            /* ignore */
+        }
+        // Allow logging again for subsequent operations
+        config._shutdown = false;
     }
 }
 
@@ -1332,6 +1419,24 @@ if (typeof module !== 'undefined' && module.exports) {
             return builtFontElementCollection;
         },
         watcher,
+        /**
+         * Clear all running watchers, observers and temporary observers. Useful for test teardown.
+         * @returns {void}
+         */
+        clearAll: function () {
+            config._shutdown = true;
+            try {
+                observer.clear();
+            } catch (err) {
+                /* noop */
+            }
+            try {
+                watcher.clear();
+            } catch (err) {
+                /* noop */
+            }
+            config._shutdown = false;
+        },
     };
 }
 
