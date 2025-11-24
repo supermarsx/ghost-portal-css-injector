@@ -188,12 +188,25 @@ var builtFontElementCollection = null;
 /* ------------------------------------------------ */
 // #region
 
+/**
+ * Lightweight logging helper for the injector.
+ *
+ * This class provides configurable logging behavior (info/warning/error) and
+ * formats messages with timestamps and level tags. Use `_log({ message, level })`
+ * as a proxy to create logs without `new`.
+ */
 class log {
 
     /* Destructured default values object */
     static default = config.defaults.log;
 
-    /* Log a message */
+    /**
+     * Create and output a log message (if logging is enabled).
+     * @param {Object} options - Options object
+     * @param {string} options.message - The message to log
+     * @param {string} options.level - The log level string (info|warning|error)
+     * @returns {void}
+     */
     constructor({ message = log.default.message, level = log.default.level }) {
         if (!config.log.enabled) return;
         var logLevel = log.getLogLevel({ level });
@@ -210,26 +223,45 @@ class log {
         }
     }
 
-    /* Get system timestamp using date */
+    /**
+     * Get formatted timestamp string for logs.
+     * @returns {string} ISO or local timestamp depending on config
+     */
     static getTimestamp() {
         return (config.log.date.iso) ?
             new Date().toISOString() :
             new Date().toString();
     }
 
-    /* Get log level from constants */
+    /**
+     * Convert a log level string into its numeric constant.
+     * @param {Object} options - Options object
+     * @param {string} options.level - Log level string (info|warning|error)
+     * @returns {number} Numeric log level constant
+     */
     static getLogLevel({ level }) {
         return LOG_LEVELS[log.sanitizeLogLevelString({ level })];
     }
 
-    /* Build a structured log message string using a message and log level */
+    /**
+     * Build a formatted console message string with timestamp and level tags.
+     * @param {Object} options - Options object
+     * @param {string} options.message - The message to include
+     * @param {string} options.level - The log level to use
+     * @returns {string} A formatted message string suitable to pass to console.log
+     */
     static getLogMessageString({ message = log.default.message, level = log.default.level }) {
         level = log.transformLogLevelString({ level });
         const timestamp = log.getTimestamp();
         return `%c[${timestamp}] %c[${level}]: %c${message}`;
     }
 
-    /* Set this script log level */
+    /**
+     * Programmatically change the global log level.
+     * @param {Object} options - Options object
+     * @param {string} options.level - Log level string (info|warning|error)
+     * @returns {void}
+     */
     static setLogLevel({ level }) {
         _log({ message: `Setting log level to ${level}` });
         if (LOG_LEVELS[level] !== undefined) {
@@ -240,7 +272,12 @@ class log {
         }
     }
 
-    /* Sanitize a log level string */
+    /**
+     * Normalize a log level string into a lowercase word.
+     * @param {Object} options - Options object
+     * @param {string} options.level - Log level string
+     * @returns {string} Lowercase sanitized level string
+     */
     static sanitizeLogLevelString({ level }) {
         return level
             .toString()
@@ -248,7 +285,13 @@ class log {
             .toLowerCase();
     }
 
-    /* Transform log level string into an abbreviated 3 character string */
+    /**
+     * Transform a log level string into an abbreviated uppercase format.
+     * Example: 'info' -> 'INF'
+     * @param {Object} options - Options object
+     * @param {string} options.level - Log level string
+     * @returns {string} Abbreviated upper-case level string
+     */
     static transformLogLevelString({ level }) {
         const charCount = config.log.characters;
         return level
@@ -274,7 +317,13 @@ const _log = new Proxy(log, {
 
 class version {
 
-    /* Extract version from the URL (e.g., "?v=0cba9e0c46") */
+    /**
+     * Extract the `v` query parameter from a URL string.
+     * Example: url='.../?v=abc' -> returns 'abc'
+     * @param {Object} options - Options object
+     * @param {string} options.url - The URL to extract the version from
+     * @returns {string} The extracted version string or empty string on failure
+     */
     static getFromUrl({ url }) {
         try {
             const splitCharacter = '?';
@@ -291,7 +340,13 @@ class version {
         }
     }
 
-    /* Search for versioned links, scripts, or styles in the head */
+    /**
+     * Search the document head for versioned elements (link/script/style) that
+     * include a `?v=` query parameter. Returns an array of objects with url
+     * and urlVersion properties.
+     * @returns {Array<{url: string, urlVersion: string}>} List of versioned resources
+     * @throws Will throw an error if there was a problem extracting versions
+     */
     static getAllFromHead() {
         try {
             _log({ message: 'Extracting file versions from head', level: 'info' });
@@ -342,7 +397,10 @@ class version {
         }
     }
 
-    /* Get the first version available from the versioned files */
+    /**
+     * Return the first available URL version string found in the document head.
+     * @returns {string|null} The first version string or null if none found
+     */
     static getFirst() {
         _log({ message: `Get the first available version from head`, level: 'info' });
         const versionedFiles = version.getAllFromHead();
@@ -358,12 +416,26 @@ class version {
 /* ------------------------------------------------ */
 // #region
 
+/**
+ * DOM element helper utilities.
+ *
+ * Provides utility methods to query and manipulate elements both in the
+ * main document and inside portal iframes: searching, cloning, counting,
+ * and creating elements necessary for injection.
+ */
 class element {
 
     /* Destructured default values object */
     static default = config.defaults.element;
 
-    /* Get an element handle based on selector */
+    /**
+     * Get a single DOM element from the document using a selector.
+     * @param {Object} options - Options object
+     * @param {string} options.selector - CSS selector to query for
+     * @param {boolean} options.wait - Whether to wait for the element until present
+     * @returns {Element} The found Element or throws an Error if not found
+     * @throws {Error} If the passed selector is empty or element retrieval fails
+     */
     static get({ selector = element.default.selector, wait = element.default.wait }) {
         try {
             let elementHandle;
@@ -381,7 +453,14 @@ class element {
         }
     }
 
-    /* Get all elements matching a given selector */
+    /**
+     * Get all elements matching a selector.
+     * @param {Object} options - Options object
+     * @param {string} options.selector - CSS selector to query for
+     * @param {boolean} options.wait - Whether to wait for elements until present
+     * @param {number} options.count - Expected number if using waitAll semantics
+     * @returns {NodeList} NodeList of elements matching the selector
+     */
     static getAll({ selector = element.default.selectorAll, wait = element.default.waitAll, count = element.default.selectorAllCount }) {
         try {
             let elementCollectionHandle;
@@ -399,12 +478,30 @@ class element {
         }
     }
 
-    /* Get all elements matching a given selector inside an iframe */
-    static getAllInsideIframe({iframe, selector}) {
-
+    /**
+     * Query a selector inside an iframe's document context and return the
+     * NodeList of matches.
+     * @param {Object} options - Options object
+     * @param {HTMLIFrameElement} options.iframe - The iframe to query
+     * @param {string} options.selector - The selector to query inside the iframe
+     * @returns {NodeList} NodeList of elements matching inside the iframe
+     * @throws {Error} If iframe or its contentDocument is not available
+     */
+    static getAllInsideIframe({ iframe, selector }) {
+        try {
+            if (!iframe || !iframe.contentDocument) throw new Error('Iframe or iframe document is not available');
+            return iframe.contentDocument.querySelectorAll(selector);
+        } catch (error) {
+            const message = 'Failed to get elements inside iframe.';
+            const cause = { cause: error };
+            throw new Error(message, cause);
+        }
     }
 
-    /* Get all portal iframes */
+    /**
+     * Get all portal iframes present on the page using configured selector.
+     * @returns {NodeList} NodeList of iframe elements
+     */
     static getAllIframes() {
         try {
             const selectorIframe = config.selector.iframes;
@@ -419,7 +516,11 @@ class element {
         }
     }
 
-    /* Get all font elements */
+    /**
+     * Get all font elements that have been marked for injection using the
+     * `injection-type="font"` attribute selector configured in `config.selector.fonts`.
+     * @returns {NodeList} NodeList of elements matching the font selector
+     */
     static getAllFonts() {
         try {
             const selectorFonts = config.selector.fonts;
@@ -434,13 +535,24 @@ class element {
         }
     }
 
-    /* Get name of a specific iframe */
+    /**
+     * Get the name (title attribute) for an iframe element.
+     * @param {Object} options - Options object
+     * @param {HTMLIFrameElement} options.iframe - The iframe to query
+     * @returns {string} The iframe title attribute value or empty string if missing
+     */
     static getIframeName({ iframe }) {
         if (iframe == undefined) return '';
-        return iframe.getAttribute('title').toString();
+        const title = iframe.getAttribute('title');
+        return title ? title.toString() : '';
     }
 
-    /* Get element count from selector */
+    /**
+     * Count elements matching a selector.
+     * @param {Object} options - Options object
+     * @param {string} options.selector - Selector to count
+     * @returns {number} Number of matching elements
+     */
     static count({ selector = element.default.selector }) {
         try {
             let elementCollectionHandle;
@@ -458,8 +570,9 @@ class element {
         try {
             let elementCollectionHandle;
             const iframeSelector = config.selector.iframes;
-            elementCollectionHandle = element.count({ selector: iframeSelector });
-            return elementCollectionHandle.length;
+            // element.count returns a number; return it directly
+            const iframeCount = element.count({ selector: iframeSelector });
+            return iframeCount;
         } catch (error) {
             const message = 'Failed to get iframe element count from selector.';
             const cause = { cause: error };
@@ -472,8 +585,9 @@ class element {
         try {
             let elementCollectionHandle;
             const fontsSelector = config.selector.fonts;
-            elementCollectionHandle = element.count({ selector: fontsSelector });
-            return elementCollectionHandle.length;
+            // element.count returns a number; return it directly
+            const fontCount = element.count({ selector: fontsSelector });
+            return fontCount;
         } catch (error) {
             const message = 'Failed to get font element count from selector.';
             const cause = { cause: error };
@@ -481,7 +595,13 @@ class element {
         }
     }
 
-    /* Clones a given element using its handle */
+    /**
+     * Clone a single element node (shallow clone, no child nodes cloned).
+     * @param {Object} options - Options object
+     * @param {Element} options.elementHandle - The element to clone
+     * @returns {Element} A cloned element node
+     * @throws {Error} If `elementHandle` is not provided or not a DOM element
+     */
     static clone({ elementHandle = element.default.elementHandle }) {
         try {
             if (elementHandle === undefined) throw new Error('Element handle is empty/undefined');
@@ -495,7 +615,12 @@ class element {
         }
     }
 
-    /* Clone all element handles */
+    /**
+     * Clone a collection of nodes and return an array of cloned nodes.
+     * @param {Object} options - Options object
+     * @param {NodeList|Array<Element>} options.elementHandleCollection - Collection of elements to clone
+     * @returns {Array<Element>} Array with cloned elements
+     */
     static cloneAll({ elementHandleCollection = element.default.handleCollection }) {
         try {
             if (elementHandleCollection === undefined) throw new Error('Element handle collection is empty/undefined');
@@ -514,7 +639,13 @@ class element {
         }
     }
 
-    /* Wait for an element until it's ready */
+    /**
+     * Wait for an element to appear in the DOM and resolve with the element.
+     * @param {Object} options - Options object
+     * @param {string} options.selector - CSS selector to watch for
+     * @param {number} options.timeout - Milliseconds to wait until timing out
+     * @returns {Promise<Element>} Promise that resolves with the element or rejects on timeout
+     */
     static wait({ selector = element.default.selector, timeout = element.default.timeout }) {
         _log({ message: `Waiting for element selector: ${selector} with timeout of ${timeout}` });
         return new Promise(function (resolve, reject) {
@@ -543,7 +674,15 @@ class element {
         });
     }
 
-    /* Wait for quantity of elements until they're available */
+    /**
+     * Wait for a specific number of elements to exist in the DOM.
+     * @param {Object} options - Options object
+     * @param {string} options.selector - Selector to query for
+     * @param {number} options.timeout - ms timeout
+     * @param {number} options.count - Target count
+     * @param {number} options.mode - Mode: 0 equal, 1 >=, 2 <=
+     * @returns {Promise<NodeList>} Promise resolving with the NodeList once condition is met
+     */
     static waitAll({ selector = element.default.selectorAll, timeout = element.default.timeout, count = element.default.waitAllCount, mode = element.default.waitAllMode }) {
         _log({ message: `Waiting for all elements with selector: ${selector} with timeout of ${timeout} using count of ${count} and mode ${mode}` });
         return new Promise(function (resolve, reject) {
@@ -586,9 +725,17 @@ class element {
         });
     }
 
+    /**
+     * Element factory helpers (create basic DOM nodes used by injector).
+     */
     static create = class {
 
-        /* Create a new link element */
+        /**
+         * Create a link element pointing to a stylesheet.
+         * @param {Object} options - Options object
+         * @param {string} options.url - URL to use in the `href` attribute
+         * @returns {HTMLLinkElement} A link node configured as a stylesheet
+         */
         static link({ url = element.default.url }) {
             try {
                 _log({ message: 'Creating link element', level: 'info' });
@@ -614,9 +761,17 @@ class element {
         }
     }
 
+    /**
+     * Element builders: use available resources in the head to build link nodes
+     * with correct versions and clone font resources for injection into iframes.
+     */
     static build = class {
 
-        /* Build link element with file version and url */
+        /**
+         * Build a link element for injecting the portal stylesheet into iframes.
+         * It uses `version.getFirst()` to construct the properly versioned URL.
+         * @returns {HTMLLinkElement} A prepared stylesheet link element
+         */
         static link() {
             _log({ message: 'Building stylesheet element', level: 'info' });
             const firstVersion = version.getFirst();
@@ -626,7 +781,11 @@ class element {
             return elementResult;
         }
 
-        /* Build font collection by cloning all */
+        /**
+         * Build a collection of cloned font elements found in the head that match
+         * the `injection-type="font"` selector.
+         * @returns {Array<Element>} Array with cloned font elements
+         */
         static fontCollection() {
             _log({ message: 'Building font collection', level: 'info' });
             var fontElementHandleCollection = element.getAllFonts();
@@ -644,9 +803,18 @@ class element {
 /* ------------------------------------------------ */
 // #region
 
+/**
+ * Watcher utility that continuously ensures injected CSS/Fonts remain in place
+ * by re-injecting on a short interval. The watcher is cleared after a configured
+ * timeout.
+ */
 class watcher {
 
-    /* Set watcher to keep injection in place */
+    /**
+     * Start the watcher interval if not already running. The watcher will call
+     * `inject.everything` to ensure all iframes have the injections.
+     * @returns {void}
+     */
     static set() {
         if (!config.watcher.enabled) return;
         if (config.watcher.current != null) return;
@@ -660,7 +828,10 @@ class watcher {
         }, config.watcher.interval);
     }
 
-    /* Clear watcher after the configured timeout */
+    /**
+     * Stop the watcher interval (if enabled and running).
+     * @returns {void}
+     */
     static clear() {
         if (!config.watcher.enabled) return;
         if (!config.watcher.cleanup) return;
@@ -675,9 +846,19 @@ class watcher {
 /* ------------------------------------------------ */
 // #region
 
+/**
+ * Injection routines to add the portal stylesheet and cloned font elements
+ * into each portal iframe's `head`.
+ */
 class inject {
 
-    /* Inject linked stylesheet (link element) in a specific iframe */
+    /**
+     * Inject a prepared stylesheet link element into a specific iframe's head.
+     * This method uses `builtLinkElement` as a template to clone and append.
+     * @param {Object} options - Options object
+     * @param {HTMLIFrameElement} options.iframe - Target iframe element
+     * @returns {void}
+     */
     static linkElement({ iframe }) {
         try {
             if (!config.inject.enabled) return;
@@ -711,7 +892,12 @@ class inject {
         }
     }
 
-    /* Inject font element collection in an iframe using cloned font collection elements */
+    /**
+     * Inject cloned font collection elements into the given iframe's head.
+     * @param {Object} options - Options object
+     * @param {HTMLIFrameElement} options.iframe - Target iframe
+     * @returns {void}
+     */
     static fontElementCollection({ iframe }) {
         try {
             if (!config.inject.enabled) return;
@@ -746,20 +932,39 @@ class inject {
         }
     }
 
-    /* Inject both stylesheet link and font elements collection into all the available iframes */
+    /**
+     * Helper that runs both link and font collection injection for a given iframe.
+     * @param {Object} options - Options object
+     * @param {HTMLIFrameElement} options.iframe - Target iframe
+     * @returns {void}
+     */
     static everything({ iframe }) {
         inject.linkElement({ iframe });
         inject.fontElementCollection({ iframe });
     }
 
+    /**
+     * Helper class to run injection over multiple iframes collections.
+     */
     static iframeCollection = class {
 
-        /* Inject linked stylesheet element in a collection of iframes */
+        /**
+         * Inject linked stylesheet into a collection of iframes.
+         * @param {Object} options - Options object
+         * @param {NodeList} options.iframes - Collection of iframe elements to inject into
+         * @returns {void}
+         */
         static linkElement({ iframes }) {
             iframes.forEach(function (iframe) { inject.linkElement({ iframe }) });
         }
 
-        /* Inject font element collection in an iframe collection using cloned font collection elements */
+        /**
+         * Inject a font elements collection into a list of iframes by delegating
+         * to `inject.fontElementCollection` for each iframe.
+         * @param {Object} options - Options object
+         * @param {NodeList} options.iframes - Collection of iframe elements
+         * @returns {void}
+         */
         static fontElementCollection({ iframes }) {
             iframes.forEach(function (iframe) { inject.fontElementCollection({ iframe }) });
         }
@@ -767,7 +972,11 @@ class inject {
 
     static firstTime = class {
 
-        /* Inject custom stylesheet for the first time */
+        /**
+         * Perform first-time stylesheet injection into all available portal iframes.
+         * This is guarded by the `config.inject.firstTime` settings.
+         * @returns {void}
+         */
         static linkElement() {
             if (!config.inject.enabled) return;
             if (!config.inject.firstTime.enabled) return;
@@ -785,7 +994,11 @@ class inject {
             }
         }
 
-        /* Inject font collection elements for the first time */
+        /**
+         * Perform a first-time font elements collection injection into all portal iframes.
+         * This is guarded by the `config.inject.firstTime` settings.
+         * @returns {void}
+         */
         static fontElementCollection() {
             if (!config.inject.enabled) return;
             if (!config.inject.firstTime.enabled) return;
@@ -803,16 +1016,29 @@ class inject {
             }
         }
 
-        /* Inject both stylesheet and font collection for the first time */
+        /**
+         * Convenience method that executes first-time stylesheet and font injection.
+         * @returns {void}
+         */
         static everything() {
             inject.firstTime.linkElement();
             inject.firstTime.fontElementCollection();
         }
     }
 
+    /**
+     * Health-check utilities that determine if expected injected elements
+     * are present inside an iframe's document (stylesheet link, fonts).
+     */
     static check = class {
 
-        /* Check if link to stylesheet element is injected in a given iframe */
+        /**
+         * Determine whether the built stylesheet link has been injected into
+         * the iframe head by checking for a matching `href`.
+         * @param {Object} options - Options object
+         * @param {HTMLIFrameElement} options.iframe - Target iframe
+         * @returns {boolean} True if the link is injected; false otherwise
+         */
         static isLinkInjected({ iframe }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
@@ -832,7 +1058,14 @@ class inject {
             }
         }
 
-        /* Check if our font elements collection are injected in an iframe */
+        /**
+         * Determine whether the requisite number of font elements have been
+         * injected into the iframe head.
+         * @param {Object} options - Options object
+         * @param {HTMLIFrameElement} options.iframe - Target iframe
+         * @param {number} options.fontCount - Expected number of font elements
+         * @returns {boolean} True if the number of fonts injected equals `fontCount`
+         */
         static areFontsInjected({ iframe, fontCount }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
@@ -861,7 +1094,13 @@ class inject {
 
 class observer {
 
-    /* Setup mutation observer */
+    /**
+     * Initialize and configure a MutationObserver that watches the portal
+     * root element and re-injects resources into any newly added portal iframes.
+     * This method waits for the `#ghost-portal-root` element and registers a
+     * `MutationObserver` to detect child additions/removals.
+     * @returns {Promise<void>} Promise resolving when the observer has been configured
+     */
     static async setup() {
         try {
             if (!config.observer.enabled) return;
@@ -921,18 +1160,27 @@ class observer {
 
 class onload {
 
-    /* Setup initial vars */
+    /**
+     * Initialize internal objects used by the injector before any DOM events
+     * occur (e.g. building the link and font element collections).
+     * @returns {Promise<void>} Promise that resolves once initial setup runs
+     */
     static async initialSetup() {
         _log({ message: 'Doing injector initial setup', level: 'info' });
         builtLinkElement = element.build.link();
         builtFontElementCollection = element.build.fontCollection();
     }
 
-    /* Setup the window onload event */
+    /**
+     * Register the `window.onload` event that will trigger the monitor setup.
+     * This should only run in a browser environment.
+     * @returns {void}
+     */
     static setupEvent() {
         try {
             _log({ message: 'Setting window onload event', level: 'info' });
-            window.onload = this.setupMonitor();
+            // Use addEventListener to avoid overriding existing onload handlers
+            window.addEventListener('load', () => this.setupMonitor());
         } catch (error) {
             const message = 'Failed to set window onload event';
             const cause = error;
@@ -941,7 +1189,11 @@ class onload {
         }
     }
 
-    /* On load event do a first time injection and setup a mutation observer */
+    /**
+     * Setup routine executed on window load: triggers `observer.setup` and
+     * performs a first-time injection of styles and fonts into iframe.
+     * @returns {void}
+     */
     static setupMonitor() {
         _log({ message: 'Doing onload setup routine', level: 'info' });
         observer.setup();
@@ -951,10 +1203,27 @@ class onload {
 }
 
 /* Self executing anonymous function that injects portal styles on window load event, makes the magic happen */
-(function () {
+/* Only auto-run when in a browser environment (window/document available) */
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     onload.initialSetup();
     onload.setupEvent();
-})();
+}
+
+/* Export classes and config for testing when required in Node */
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        onload,
+        inject,
+        observer,
+        element,
+        version,
+        log,
+        config,
+        builtLinkElement,
+        builtFontElementCollection,
+        watcher
+    };
+}
 
 // #endregion
 

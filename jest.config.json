@@ -1,0 +1,15 @@
+{
+  "testEnvironment": "jsdom",
+  "coverageDirectory": "coverage",
+  "testMatch": ["**/__tests__/**/*.test.js"],
+  "collectCoverageFrom": ["injector/**/*.js"]
+  ,
+  "coverageThreshold": {
+    "global": {
+      "branches": 90,
+      "functions": 90,
+      "lines": 90,
+      "statements": 90
+    }
+  }
+}

@@ -98,6 +98,48 @@ Notes:
 - If you change versions frequently, bump the `?v=` value to force the injector to use the new file.
 - If your theme uses a CSS/JS build pipeline, add the files to your build output folders accordingly (e.g., `assets/built/` and `assets/js/`).
 
+## CI & Releases
+
+This repository contains a GitHub Actions pipeline (see `.github/workflows/ci.yml`) that runs on pushes to `main`, pull requests, and manual dispatch. The pipeline includes separate jobs for:
+
+- `lint` — runs ESLint
+- `format` — runs Prettier checks
+- `test` — runs Jest tests
+- `package` — creates an `npm pack` artifact
+- `release` — creates an automatic GitHub release whenever a commit is pushed to `main`.
+
+The release job tags the current commit with the short SHA tag format `v<short_sha>` (example: `v1a2b3c`) and creates a GitHub release with the packaged artifact attached.
+
+Automatic release behavior
+- The automatic release job runs only on pushes to `main` and will only create a release if there are code changes in relevant files (`injector/**`, `package.json`, `assets/**`, `*.js`, `*.hbs`). This prevents releases on documentation-only changes or other unrelated edits.
+- If you'd like to force a release regardless of changed paths, use the 'Manual Release' workflow dispatch trigger which will create a release for the current commit and upload the packaged artifact.
+
+If you'd like to manually create a release locally, you can run:
+
+```bash
+# create a tag with the short commit
+git tag -a v$(git rev-parse --short HEAD) -m "Release"
+git push origin --tags
+```
+
+And then create a release through the GitHub UI for the created tag.
+
+Running tests & CI locally
+
+- Install dependencies using `npm install` (we intentionally use `npm install` in CI to match your request):
+
+```bash
+npm install
+```
+
+- Run the test suite with coverage locally:
+
+```bash
+npm test
+```
+
+The repo includes a test suite that checks the injector script and validates behavior in a DOM-like environment (jsdom). The CI enforces 100% coverage for this code.
+
 ## Notes
 
 If you're going to use fonts injection the only good workaround to inject them is to add the attribute to every element related to the font(s) in the `.hbs` files, which by default the attribute goes with the selector `[injection-type="font"]`.
