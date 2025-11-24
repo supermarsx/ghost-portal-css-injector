@@ -125,6 +125,13 @@ Automatic release behavior
         2. Ensure `package.json` does not have `private: true` — the workflow will skip publishing if the `private` key is set to `true`.
         3. Publishing is gated by both the token presence and a change to code-related files; if you want to publish regardless of files changed, use the 'Manual Release' trigger.
 
+    Note about `workflow_run` and secrets
+
+    - GitHub does not expose repository secrets to workflows that are triggered by `workflow_run` for security reasons, so the automatic `Release` workflow that runs after `Package` cannot access `NPM_TOKEN` when triggered by the `workflow_run` event. This means:
+        - The auto `Release` workflow will skip npm publish if the `NPM_TOKEN` secret is not available to it and will continue to create a GitHub release and upload artifacts.
+        - If you need to run the publish step automatically, consider replacing the `workflow_run` trigger with a `push` / release strategy (or a manual `workflow_dispatch`), or perform npm publishing from the workflow that creates the `Package` artifact where the secret is available.
+
+
 If you'd like to manually create a release locally, you can run:
 
 ```bash
