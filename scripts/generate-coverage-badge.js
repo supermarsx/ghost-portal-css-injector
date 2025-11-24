@@ -8,17 +8,42 @@ const fs = require('fs');
 const path = require('path');
 
 function readCoverageSummary() {
-    const file = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
-    if (!fs.existsSync(file)) {
-        throw new Error(`Coverage summary not found at ${file}`);
+    const summaryFile = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+    if (fs.existsSync(summaryFile)) {
+        const content = fs.readFileSync(summaryFile, 'utf8');
+        try {
+            return JSON.parse(content);
+        } catch (err) {
+            throw new Error('Invalid coverage summary JSON');
+        }
     }
-    const content = fs.readFileSync(file, 'utf8');
-    try {
-        const json = JSON.parse(content);
-        return json;
-    } catch (err) {
-        throw new Error('Invalid coverage summary JSON');
+
+    // Fallback to coverage-final.json (Jest sometimes emits this instead)
+    const finalFile = path.join(process.cwd(), 'coverage', 'coverage-final.json');
+    if (fs.existsSync(finalFile)) {
+        const content = fs.readFileSync(finalFile, 'utf8');
+        try {
+            const finalJson = JSON.parse(content);
+            // coverage-final.json may not include a `total` root; compute coverage percent from statements
+            let totalStatements = 0;
+            let coveredStatements = 0;
+            Object.keys(finalJson).forEach((file) => {
+                const fileCoverage = finalJson[file];
+                if (fileCoverage && fileCoverage.s) {
+                    const statements = Object.keys(fileCoverage.s).length;
+                    const covered = Object.values(fileCoverage.s).filter((v) => v > 0).length;
+                    totalStatements += statements;
+                    coveredStatements += covered;
+                }
+            });
+            if (totalStatements === 0) throw new Error('No statement coverage found');
+            const pct = Math.round((coveredStatements / totalStatements) * 100);
+            return { total: { statements: { pct } } };
+        } catch (err) {
+            throw new Error('Invalid coverage-final.json');
+        }
     }
+    throw new Error(`Coverage summary not found at ${summaryFile}`);
 }
 
 function getCoveragePercent(summary) {

@@ -92,4 +92,41 @@ describe('Observer and Watcher', () => {
         spy.mockRestore();
         jest.useRealTimers();
     });
+
+    test('clearAll removes temp observers and clears observer/watcher', async () => {
+        // setup: ensure DOM is fresh and there is a versioned link for injects
+        document.head.innerHTML = '';
+        document.body.innerHTML = '';
+        const versioned = document.createElement('link');
+        versioned.rel = 'stylesheet';
+        versioned.href = '/assets/built/portal.css?v=hash123';
+        document.head.appendChild(versioned);
+
+        // make element.wait create temporary observers
+        injector.config.defaults.element.timeout = 1000; // long timeout
+        const waitPromise1 = injector.element.wait({ selector: '#will-not-appear-1', timeout: 1000 }).catch(() => {});
+        const waitPromise2 = injector.element.wait({ selector: '#will-not-appear-2', timeout: 1000 }).catch(() => {});
+
+        expect(Array.isArray(injector.config.observer.tempObservers)).toBe(true);
+        expect(injector.config.observer.tempObservers.length).toBeGreaterThanOrEqual(2);
+
+        // Now set up a main observer and a watcher to assert those are cleared
+        const root = document.createElement('div');
+        root.id = 'ghost-portal-root';
+        document.body.appendChild(root);
+        await injector.observer.setup();
+        injector.watcher.set();
+        expect(injector.config.observer.current).not.toBeNull();
+        expect(injector.config.watcher.current).not.toBeNull();
+
+        // Call clearAll and verify clean state
+        injector.clearAll();
+        expect(injector.config.observer.tempObservers.length).toBe(0);
+        expect(injector.config.observer.current).toBeNull();
+        expect(injector.config.watcher.current).toBeNull();
+
+        // Cleanup any created promises
+        await waitPromise1;
+        await waitPromise2;
+    });
 });
