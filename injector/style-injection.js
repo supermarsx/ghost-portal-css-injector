@@ -382,8 +382,12 @@ class version {
             const message = 'Failed to extract file versions from head';
             const cause = error;
             // Log the error and include the stack trace if available via the logging proxy
-            const causeDump = typeof cause === 'object' && cause.stack ? cause.stack : String(cause);
-            _logProxy({ message: `${message} due to ${causeDump}`, level: 'error' });
+            const causeMessage = typeof cause === 'object' && cause.message ? cause.message : String(cause);
+            _logProxy({ message: `${message} due to ${causeMessage}`, level: 'error' });
+            // Print the full stack only if logging is in verbose/info mode
+            if (config.log.enabled && config.log.level === 'info' && typeof cause === 'object' && cause.stack) {
+                _logProxy({ message: cause.stack, level: 'info' });
+            }
             // Throw a new error with cause for clarity in stack traces where supported
             throw new Error(message, { cause });
         }
