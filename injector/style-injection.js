@@ -2,35 +2,35 @@
  * ------------------------
  * Portal styling injection
  * ------------------------
- * 
+ *
  * This script injects a third party link element
  * containing different style to the portals iframes
  * so you don't need to actually rebuild the whole thing.
  * It's basically an overengineered CSS stylesheet
  * injector that you can semi "plug & play" into Ghost.
- * I want a dark mode portal for which i don't have 
+ * I want a dark mode portal for which i don't have
  * to keep up with another repo so i did this. :)
- * 
- * This script includes, foreign iframe injection 
- * capabiltiies, waiting for elements, monitoring 
- * iframes, which is basically injection persistence 
- * and timeout sub monitoring that checks for a 
+ *
+ * This script includes, foreign iframe injection
+ * capabiltiies, waiting for elements, monitoring
+ * iframes, which is basically injection persistence
+ * and timeout sub monitoring that checks for a
  * couple of seconds if everything is still injected
  * and keeps injecting during that time. This script
- * also has logging capabilities for extended 
- * debugging and monitoring just for extra fun. 
- * 
+ * also has logging capabilities for extended
+ * debugging and monitoring just for extra fun.
+ *
  * This file should be placed under the theme
  * assets/js folder and built afterwards.
- * 
+ *
  */
 
 /**
- * 
+ *
  * --------
  * Contents
  * --------
- * 
+ *
  * 1. Initialization
  * 2. Logging
  * 3. Version
@@ -39,9 +39,8 @@
  * 6. Injection
  * 7. Mutation observer
  * 8. On load
- * 
+ *
  */
-
 
 /* 1. Initialization
 /* ------------------------------------------------ */
@@ -53,7 +52,7 @@
 const LOG_LEVELS = {
     info: 1,
     warning: 2,
-    error: 3
+    error: 3,
 };
 
 /**
@@ -63,117 +62,116 @@ const TAGS = {
     iframe: 'IFRAME',
     link: 'LINK',
     script: 'SCRIPT',
-    style: 'STYLE'
+    style: 'STYLE',
 };
 
 /**
  * Global configuration object
- * 
+ *
  * Use this object to configure the injection scripts behavior,
  * you should only change stuff you actually need, such as
  * font elements selector and enabling or desabling certain
  * functions for degugging or functionality purposes.
- * 
+ *
  */
 const config = {
     selector: {
-        root: '#ghost-portal-root',             // Portal root element selector, sits at the bottom of the body and contains every portal iframe
-        iframes: '#ghost-portal-root iframe',   // Portal child iframe selector, selects every iframe specifically for injection
-        iframe: 'iframe',                       // Generic iframe selector, selects every available iframe in the page
-        stylesheet: 'link[rel="stylesheet"]',   // Stylesheet link selector, selects every linked stylesheet available in the page
-        fonts: '[injection-type="font"]',       // Font elements collection selector, special selector that requires previous setup of font tags in hbs files to correctly acquire them later
+        root: '#ghost-portal-root', // Portal root element selector, sits at the bottom of the body and contains every portal iframe
+        iframes: '#ghost-portal-root iframe', // Portal child iframe selector, selects every iframe specifically for injection
+        iframe: 'iframe', // Generic iframe selector, selects every available iframe in the page
+        stylesheet: 'link[rel="stylesheet"]', // Stylesheet link selector, selects every linked stylesheet available in the page
+        fonts: '[injection-type="font"]', // Font elements collection selector, special selector that requires previous setup of font tags in hbs files to correctly acquire them later
     },
     log: {
-        enabled: true,      // Enable logging, includes debug logging 
-        level: 'warning',   // Log level: 'info', 'warning', 'error', info is equivalent to a verbose output, used for debugging only
+        enabled: true, // Enable logging, includes debug logging
+        level: 'warning', // Log level: 'info', 'warning', 'error', info is equivalent to a verbose output, used for debugging only
         date: {
-            iso: true       // Convert log date string to ISO compliant string
+            iso: true, // Convert log date string to ISO compliant string
         },
-        characters: 3       // Log level tag abbreviation character count, e.g. info becomes INF
+        characters: 3, // Log level tag abbreviation character count, e.g. info becomes INF
     },
     inject: {
-        enabled: true,      // Injection globally enabled?
-        style: true,        // Linked stylesheet injection enabled?
-        fonts: true,        // Font elements collection injection enabled?
-        fontCount: 18,      // Font elements count base count/override setting
-        fontCountAuto: 0,   // Are font elements counted automatically? true: Automatically using font selector, false: Overridden by configuration
+        enabled: true, // Injection globally enabled?
+        style: true, // Linked stylesheet injection enabled?
+        fonts: true, // Font elements collection injection enabled?
+        fontCount: 18, // Font elements count base count/override setting
+        fontCountAuto: 0, // Are font elements counted automatically? true: Automatically using font selector, false: Overridden by configuration
         firstTime: {
-            enabled: true,      // First time injection on load enabled?
-            style: true,        // First time style injection enabled?
-            fonts: true,        // First time font elements collection injection enabled?
+            enabled: true, // First time injection on load enabled?
+            style: true, // First time style injection enabled?
+            fonts: true, // First time font elements collection injection enabled?
         },
-        setWatcherOnFont: false,    // Set watcher on font elements collection injection?
-        clearWatcherOnFont: false   // Clear watcher on font elements if timeout and injection are met?
+        setWatcherOnFont: false, // Set watcher on font elements collection injection?
+        clearWatcherOnFont: false, // Clear watcher on font elements if timeout and injection are met?
     },
     observer: {
-        enabled: true,          // Mutation observer enabled? (Guarantees that injection reaches all available iframes)
-        target: 'childList',    // Target mutation observer type
+        enabled: true, // Mutation observer enabled? (Guarantees that injection reaches all available iframes)
+        target: 'childList', // Target mutation observer type
         initialization: {
-            childList: true,    // Watch for added or removed nodes?
-            subtree: true       // Watch the entire subtree of #ghost-portal-root element ID?
-        }
+            childList: true, // Watch for added or removed nodes?
+            subtree: true, // Watch the entire subtree of #ghost-portal-root element ID?
+        },
     },
     watcher: {
-        enabled: true,      // Watcher enabled? (Guarantees that injection is kept in place after the first injection)
-        cleanup: true,      // Watcher cleanup enabled? (When set to false the watcher won't be turned off, not recommended)
-        current: null,      // Current injection watcher variable, will contain the current watcher if is running
-        cycleCount: 0,      // Starting number for the watcher cycle counter
-        interval: 50,       // Watcher interval in milliseconds (ms), recommended at 50ms
+        enabled: true, // Watcher enabled? (Guarantees that injection is kept in place after the first injection)
+        cleanup: true, // Watcher cleanup enabled? (When set to false the watcher won't be turned off, not recommended)
+        current: null, // Current injection watcher variable, will contain the current watcher if is running
+        cycleCount: 0, // Starting number for the watcher cycle counter
+        interval: 50, // Watcher interval in milliseconds (ms), recommended at 50ms
         timer: {
-            limit: 3000,    // Watcher time limit in milliseconds (ms), defines the watcher execution time limit
-            start: 0,       // Watcher timer start timestamp, will be set later with date
-            end: 0          // Watcher timer end timestamp, will be set later with date too
-        }
+            limit: 3000, // Watcher time limit in milliseconds (ms), defines the watcher execution time limit
+            start: 0, // Watcher timer start timestamp, will be set later with date
+            end: 0, // Watcher timer end timestamp, will be set later with date too
+        },
     },
     stylesheet: {
         url: {
-            prefix: '/assets/built/portal.css?v=',  // Custom linked stylesheet URL prefix
-        }
+            prefix: '/assets/built/portal.css?v=', // Custom linked stylesheet URL prefix
+        },
     },
     version: {
-        selector: 'link, script, style',            // Version getter, base selector to the elements that have versions
-        pattern: '?v=',                             // Base prefix pattern to obtain version
-        extractMin: 0,                              // Version string excerpt starting character
-        extractMax: 15,                             // Version string excerpt ending character
-
+        selector: 'link, script, style', // Version getter, base selector to the elements that have versions
+        pattern: '?v=', // Base prefix pattern to obtain version
+        extractMin: 0, // Version string excerpt starting character
+        extractMax: 15, // Version string excerpt ending character
     },
     errors: {
-        throwOnRegularInjectionFailure: false,          // Throw error when injection fails?
-        throwOnFirstTimeInjectionFailure: false,        // Throw error when first time injection fails?
-        throwOnUndefinedIFrameLinkInjection: true,      // Throw error when linked stylesheet injection fails due to an undefined iframe?
-        throwOnLinkInjectionCheckFailure: false,        // Throw error when checking for the linked stylesheet injection fails?
-        throwOnUndefinedIFrameFontInjection: true       // Throw error when font element collection injection fails due to undefined iframe?
+        throwOnRegularInjectionFailure: false, // Throw error when injection fails?
+        throwOnFirstTimeInjectionFailure: false, // Throw error when first time injection fails?
+        throwOnUndefinedIFrameLinkInjection: true, // Throw error when linked stylesheet injection fails due to an undefined iframe?
+        throwOnLinkInjectionCheckFailure: false, // Throw error when checking for the linked stylesheet injection fails?
+        throwOnUndefinedIFrameFontInjection: true, // Throw error when font element collection injection fails due to undefined iframe?
     },
     /* Default section, probably shouldn't need changes, only under special circunstances */
     defaults: {
         log: {
-            message: '',        // Default log message
-            level: 'info',      // Default logging level
+            message: '', // Default log message
+            level: 'info', // Default logging level
             colors: {
-                timestamp: 'color: orange',     // Default log timestamp color/style
-                message: 'color: white',        // Default log message color/style
+                timestamp: 'color: orange', // Default log timestamp color/style
+                message: 'color: white', // Default log message color/style
                 level: {
-                    error: 'color: red',        // Default log error level color/style
-                    warning: 'color: yellow',   // Default log warning level color/style
-                    info: 'color: green'        // Default log informational level color/style
+                    error: 'color: red', // Default log error level color/style
+                    warning: 'color: yellow', // Default log warning level color/style
+                    info: 'color: green', // Default log informational level color/style
                 },
-                error: 'color: red; background-color: white'    // Default error style
-            }
+                error: 'color: red; background-color: white', // Default error style
+            },
         },
         element: {
-            selector: '',           // Default selector for a single element
-            selectorAll: '',        // Default selector for all elements
-            selectorAllCount: -1,       // Default all element selection count
-            originalHandle: undefined,  // Default original element handle
-            handleCollection: [],       // Default element handle collection
-            wait: false,        // Proxy wait toggle
-            waitAll: false,     // Proxy wait all toggle
-            waitAllCount: 0,    // Proxy wait all element count
-            waitAllMode: 1,     // Proxy wait all mode (element count mode), 0 - Equal, 1 - More than or equal, 2 - Less than or equal
-            timeout: 15000,     // Element wait timeout in ms
-            url: ''             // Default element link url
-        }
-    }
+            selector: '', // Default selector for a single element
+            selectorAll: '', // Default selector for all elements
+            selectorAllCount: -1, // Default all element selection count
+            originalHandle: undefined, // Default original element handle
+            handleCollection: [], // Default element handle collection
+            wait: false, // Proxy wait toggle
+            waitAll: false, // Proxy wait all toggle
+            waitAllCount: 0, // Proxy wait all element count
+            waitAllMode: 1, // Proxy wait all mode (element count mode), 0 - Equal, 1 - More than or equal, 2 - Less than or equal
+            timeout: 15000, // Element wait timeout in ms
+            url: '', // Default element link url
+        },
+    },
 };
 
 /**
@@ -196,7 +194,6 @@ let builtFontElementCollection = null;
  * as a proxy to create logs without `new`.
  */
 class log {
-
     /* Destructured default values object */
     static default = config.defaults.log;
 
@@ -213,10 +210,10 @@ class log {
 
         // Check if the current log level allows this message
         if (logLevel >= LOG_LEVELS[config.log.level]) {
-            let logMessage = log.getLogMessageString({ message, level });
+            const logMessage = log.getLogMessageString({ message, level });
             const colors = config.defaults.log.colors;
             let levelColor = undefined;
-            const sanitizedLevel = log.sanitizeLogLevelString({ level });
+            let sanitizedLevel = log.sanitizeLogLevelString({ level });
             sanitizedLevel = sanitizedLevel === undefined ? 'info' : sanitizedLevel;
             levelColor = colors.level[sanitizedLevel];
             console.log(logMessage, colors.timestamp, levelColor, colors.level.message);
@@ -228,9 +225,7 @@ class log {
      * @returns {string} ISO or local timestamp depending on config
      */
     static getTimestamp() {
-        return (config.log.date.iso) ?
-            new Date().toISOString() :
-            new Date().toString();
+        return config.log.date.iso ? new Date().toISOString() : new Date().toString();
     }
 
     /**
@@ -279,10 +274,7 @@ class log {
      * @returns {string} Lowercase sanitized level string
      */
     static sanitizeLogLevelString({ level }) {
-        return level
-            .toString()
-            .trim()
-            .toLowerCase();
+        return level.toString().trim().toLowerCase();
     }
 
     /**
@@ -294,11 +286,7 @@ class log {
      */
     static transformLogLevelString({ level }) {
         const charCount = config.log.characters;
-        return level
-            .toString()
-            .trim()
-            .toUpperCase()
-            .substring(0, charCount);
+        return level.toString().trim().toUpperCase().substring(0, charCount);
     }
 }
 
@@ -306,7 +294,7 @@ class log {
 const _log = new Proxy(log, {
     apply(target, thisArg, argumentsList) {
         return new target(...argumentsList);
-    }
+    },
 });
 
 // #endregion
@@ -316,7 +304,6 @@ const _log = new Proxy(log, {
 // #region
 
 class version {
-
     /**
      * Extract the `v` query parameter from a URL string.
      * Example: url='.../?v=abc' -> returns 'abc'
@@ -385,7 +372,10 @@ class version {
             const stringExtract = versionedFiles[0].url.toString().substring(extractMin, extractMax);
             const firstFileVersion = versionedFiles[0].urlVersion.toString();
 
-            _log({ message: `Got versioned files from head, example: ${stringExtract}... ${firstFileVersion}`, level: 'info' });
+            _log({
+                message: `Got versioned files from head, example: ${stringExtract}... ${firstFileVersion}`,
+                level: 'info',
+            });
 
             return versionedFiles;
         } catch (error) {
@@ -393,7 +383,7 @@ class version {
             const cause = error;
             console.trace();
             _log({ message: `${message} due to ${cause}`, level: 'error' });
-            throw new Error(message, cause)
+            throw new Error(message, cause);
         }
     }
 
@@ -402,7 +392,7 @@ class version {
      * @returns {string|null} The first version string or null if none found
      */
     static getFirst() {
-        _log({ message: `Get the first available version from head`, level: 'info' });
+        _log({ message: 'Get the first available version from head', level: 'info' });
         const versionedFiles = version.getAllFromHead();
         const firstVersion = versionedFiles.length > 0 ? versionedFiles[0].urlVersion : null;
         _log({ message: `First version from head is ${firstVersion}`, level: 'info' });
@@ -424,7 +414,6 @@ class version {
  * and creating elements necessary for injection.
  */
 class element {
-
     /* Destructured default values object */
     static default = config.defaults.element;
 
@@ -438,9 +427,9 @@ class element {
      */
     static get({ selector = element.default.selector, wait = element.default.wait }) {
         try {
-            const elementHandle = document.querySelector(selector);
+            let elementHandle = document.querySelector(selector);
             if (selector.length === 0) {
-                const message = `Selector parameter is empty.`;
+                const message = 'Selector parameter is empty.';
                 throw new Error(message);
             }
             if (wait) return element.wait({ selector });
@@ -461,9 +450,13 @@ class element {
      * @param {number} options.count - Expected number if using waitAll semantics
      * @returns {NodeList} NodeList of elements matching the selector
      */
-    static getAll({ selector = element.default.selectorAll, wait = element.default.waitAll, count = element.default.selectorAllCount }) {
+    static getAll({
+        selector = element.default.selectorAll,
+        wait = element.default.waitAll,
+        count = element.default.selectorAllCount,
+    }) {
         try {
-            const elementCollectionHandle = document.querySelectorAll(selector);
+            let elementCollectionHandle = document.querySelectorAll(selector);
             if (selector.length === 0) {
                 const message = 'Selector parameter is empty.';
                 throw new Error(message);
@@ -556,7 +549,6 @@ class element {
     static count({ selector = element.default.selector }) {
         try {
             const elementCollectionHandle = element.getAll({ selector });
-            elementCollectionHandle = element.getAll({ selector });
             return elementCollectionHandle.length;
         } catch (error) {
             const message = 'Failed to get element count from selector.';
@@ -566,9 +558,8 @@ class element {
     }
 
     /* Get portal iframe count */
-    static countIframes() { 
+    static countIframes() {
         try {
-            const elementCollectionHandle = element.getAll({ selector });
             const iframeSelector = config.selector.iframes;
             // element.count returns a number; return it directly
             const iframeCount = element.count({ selector: iframeSelector });
@@ -583,7 +574,6 @@ class element {
     /* Get font elements count */
     static countFonts() {
         try {
-            const elementCollectionHandle = element.getAll({ selector });
             const fontsSelector = config.selector.fonts;
             // element.count returns a number; return it directly
             const fontCount = element.count({ selector: fontsSelector });
@@ -661,13 +651,13 @@ class element {
             });
             const options = {
                 childList: true,
-                subtree: true
+                subtree: true,
             };
             const target = document.body;
             observer.observe(target, options);
             const timeoutChecker = setTimeout(function () {
                 observer.disconnect();
-                const message = `Timed out waiting for element.`;
+                const message = 'Timed out waiting for element.';
                 _log({ message: `${message}`, level: 'warning' });
                 reject(message);
             }, timeout);
@@ -683,14 +673,20 @@ class element {
      * @param {number} options.mode - Mode: 0 equal, 1 >=, 2 <=
      * @returns {Promise<NodeList>} Promise resolving with the NodeList once condition is met
      */
-    static waitAll({ selector = element.default.selectorAll, timeout = element.default.timeout, count = element.default.waitAllCount, mode = element.default.waitAllMode }) {
-        _log({ message: `Waiting for all elements with selector: ${selector} with timeout of ${timeout} using count of ${count} and mode ${mode}` });
+    static waitAll({
+        selector = element.default.selectorAll,
+        timeout = element.default.timeout,
+        count = element.default.waitAllCount,
+        mode = element.default.waitAllMode,
+    }) {
+        _log({
+            message: `Waiting for all elements with selector: ${selector} with timeout of ${timeout} using count of ${count} and mode ${mode}`,
+        });
         return new Promise(function (resolve, reject) {
             try {
                 const elementCollectionObject = element.getAll({ selector });
                 if (count < 1) throw new Error('Invalid object count target.');
-                if (elementCollectionObject instanceof NodeList && elementCollectionObject.length >= count)
-                    resolve(elementCollectionObject);
+                if (elementCollectionObject instanceof NodeList && elementCollectionObject.length >= count) resolve(elementCollectionObject);
                 const observer = new MutationObserver(function () {
                     const elementCollectionObject = element.getAll({ selector });
                     switch (mode) {
@@ -698,16 +694,18 @@ class element {
                             if (elementCollectionObject instanceof NodeList && elementCollectionObject.length >= count) resolve(elementCollectionObject);
                             break;
                         case 2: // Less than or equal
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length < count) resolve(elementCollectionObject);
+                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length < count)
+                                resolve(elementCollectionObject);
                             break;
                         default: // Equal, 0 or other values
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length === count) resolve(elementCollectionObject);
+                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length === count)
+                                resolve(elementCollectionObject);
                             break;
                     }
                 });
                 const options = {
                     childList: true,
-                    subtree: true
+                    subtree: true,
                 };
                 const target = document.body;
                 observer.observe(target, options);
@@ -729,7 +727,6 @@ class element {
      * Element factory helpers (create basic DOM nodes used by injector).
      */
     static create = class {
-
         /**
          * Create a link element pointing to a stylesheet.
          * @param {Object} options - Options object
@@ -745,7 +742,7 @@ class element {
                 const typeRel = 'stylesheet';
 
                 const linkElement = document.createElement(elementType);
-                linkElement.link = linkType;
+                linkElement.type = linkType;
                 linkElement.rel = typeRel;
                 linkElement.href = url;
 
@@ -759,14 +756,13 @@ class element {
                 throw new Error(message, cause);
             }
         }
-    }
+    };
 
     /**
      * Element builders: use available resources in the head to build link nodes
      * with correct versions and clone font resources for injection into iframes.
      */
     static build = class {
-
         /**
          * Build a link element for injecting the portal stylesheet into iframes.
          * It uses `version.getFirst()` to construct the properly versioned URL.
@@ -790,11 +786,11 @@ class element {
             _log({ message: 'Building font collection', level: 'info' });
             const fontElementHandleCollection = element.getAllFonts();
             const fontElementCloneCollection = element.cloneAll({
-                elementHandleCollection: fontElementHandleCollection
+                elementHandleCollection: fontElementHandleCollection,
             });
             return fontElementCloneCollection;
         }
-    }
+    };
 }
 
 // #endregion
@@ -809,7 +805,6 @@ class element {
  * timeout.
  */
 class watcher {
-
     /**
      * Start the watcher interval if not already running. The watcher will call
      * `inject.everything` to ensure all iframes have the injections.
@@ -824,7 +819,9 @@ class watcher {
             config.watcher.cycleCount++;
             _log({ message: `Watcher cycle count: ${config.watcher.cycleCount}`, level: 'info' });
             const iframes = element.getAllIframes();
-            iframes.forEach(function (iframe) { inject.everything({ iframe }); });
+            iframes.forEach(function (iframe) {
+                inject.everything({ iframe });
+            });
         }, config.watcher.interval);
     }
 
@@ -851,7 +848,6 @@ class watcher {
  * into each portal iframe's `head`.
  */
 class inject {
-
     /**
      * Inject a prepared stylesheet link element into a specific iframe's head.
      * This method uses `builtLinkElement` as a template to clone and append.
@@ -871,7 +867,10 @@ class inject {
                 const link = element.clone({ elementHandle: builtLinkElement });
                 iframe.contentDocument.head.appendChild(link);
                 if (!inject.check.isLinkInjected({ iframe })) {
-                    _log({ message: 'Failed to inject using the main method, falling back to an alternative', level: 'info' });
+                    _log({
+                        message: 'Failed to inject using the main method, falling back to an alternative',
+                        level: 'info',
+                    });
                     iframe.contentWindow.document.head.appendChild(link);
                 }
                 _log({ message: `Injected stylesheet using link element in iframe ${iframeName}`, level: 'info' });
@@ -919,8 +918,14 @@ class inject {
             if (config.inject.setWatcherOnFont && config.inject.clearWatcherOnFont) {
                 const currentDate = Date.now();
 
-                if (inject.check.areFontsInjected({ iframe, fontCount: config.selector.fontCount }) && currentDate > config.watcher.timer.end) {
-                    _log({ message: 'Font element collection is injected and timeout reached, clearing watcher', level: 'info' });
+                if (
+                    inject.check.areFontsInjected({ iframe, fontCount: config.selector.fontCount }) &&
+                    currentDate > config.watcher.timer.end
+                ) {
+                    _log({
+                        message: 'Font element collection is injected and timeout reached, clearing watcher',
+                        level: 'info',
+                    });
                     watcher.clear();
                 }
             }
@@ -947,7 +952,6 @@ class inject {
      * Helper class to run injection over multiple iframes collections.
      */
     static iframeCollection = class {
-
         /**
          * Inject linked stylesheet into a collection of iframes.
          * @param {Object} options - Options object
@@ -955,7 +959,9 @@ class inject {
          * @returns {void}
          */
         static linkElement({ iframes }) {
-            iframes.forEach(function (iframe) { inject.linkElement({ iframe }) });
+            iframes.forEach(function (iframe) {
+                inject.linkElement({ iframe });
+            });
         }
 
         /**
@@ -966,12 +972,13 @@ class inject {
          * @returns {void}
          */
         static fontElementCollection({ iframes }) {
-            iframes.forEach(function (iframe) { inject.fontElementCollection({ iframe }) });
+            iframes.forEach(function (iframe) {
+                inject.fontElementCollection({ iframe });
+            });
         }
-    }
+    };
 
     static firstTime = class {
-
         /**
          * Perform first-time stylesheet injection into all available portal iframes.
          * This is guarded by the `config.inject.firstTime` settings.
@@ -1024,14 +1031,13 @@ class inject {
             inject.firstTime.linkElement();
             inject.firstTime.fontElementCollection();
         }
-    }
+    };
 
     /**
      * Health-check utilities that determine if expected injected elements
      * are present inside an iframe's document (stylesheet link, fonts).
      */
     static check = class {
-
         /**
          * Determine whether the built stylesheet link has been injected into
          * the iframe head by checking for a matching `href`.
@@ -1042,12 +1048,20 @@ class inject {
         static isLinkInjected({ iframe }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
-                _log({ message: `Checking if link element is already injected in iframe ${iframeName}`, level: 'info' });
+                _log({
+                    message: `Checking if link element is already injected in iframe ${iframeName}`,
+                    level: 'info',
+                });
                 const linkSelector = config.selector.stylesheet;
                 const links = iframe.contentDocument.querySelectorAll(linkSelector);
                 const linkUrl = builtLinkElement.href;
-                const isLinkElementPresent = Array.from(links).some(function (link) { return link.href === linkUrl });
-                _log({ message: `Link element is${isLinkElementPresent ? '' : ' NOT'} present in iframe ${iframeName}.`, level: 'info' });
+                const isLinkElementPresent = Array.from(links).some(function (link) {
+                    return link.href === linkUrl;
+                });
+                _log({
+                    message: `Link element is${isLinkElementPresent ? '' : ' NOT'} present in iframe ${iframeName}.`,
+                    level: 'info',
+                });
                 return isLinkElementPresent;
             } catch (error) {
                 const message = 'Failed to check if link element is already injected into iframe';
@@ -1069,11 +1083,17 @@ class inject {
         static areFontsInjected({ iframe, fontCount }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
-                _log({ message: `Checking if font element collection is already injected in iframe ${iframeName}`, level: 'info' });
+                _log({
+                    message: `Checking if font element collection is already injected in iframe ${iframeName}`,
+                    level: 'info',
+                });
                 const fontCollectionSelector = config.selector.fonts;
                 const fontCollection = iframe.contentDocument.querySelectorAll(fontCollectionSelector);
-                const areFontsPresent = (fontCollection.length === fontCount);
-                _log({ message: `Font element collection is${areFontsPresent ? '' : ' NOT'} present in iframe ${iframeName}`, level: 'info' });
+                const areFontsPresent = fontCollection.length === fontCount;
+                _log({
+                    message: `Font element collection is${areFontsPresent ? '' : ' NOT'} present in iframe ${iframeName}`,
+                    level: 'info',
+                });
                 return areFontsPresent;
             } catch (error) {
                 const message = 'Failed to check if font element collection is already injected into iframe';
@@ -1083,7 +1103,7 @@ class inject {
                 return false;
             }
         }
-    }
+    };
 }
 
 // #endregion
@@ -1093,7 +1113,6 @@ class inject {
 // #region
 
 class observer {
-
     /**
      * Initialize and configure a MutationObserver that watches the portal
      * root element and re-injects resources into any newly added portal iframes.
@@ -1160,7 +1179,6 @@ class observer {
 // #region
 
 class onload {
-
     /**
      * Initialize internal objects used by the injector before any DOM events
      * occur (e.g. building the link and font element collections).
@@ -1222,9 +1240,8 @@ if (typeof module !== 'undefined' && module.exports) {
         config,
         builtLinkElement,
         builtFontElementCollection,
-        watcher
+        watcher,
     };
 }
 
 // #endregion
-

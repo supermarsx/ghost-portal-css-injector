@@ -1,230 +1,230 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
-    # Ignore badge updates to prevent infinite badge-commit loops
-    paths-ignore:
-      - 'badges/**'
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch: {}
+    push:
+        branches: [main]
+        # Ignore badge updates to prevent infinite badge-commit loops
+        paths-ignore:
+            - 'badges/**'
+    pull_request:
+        branches: [main]
+    workflow_dispatch: {}
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Lint
-        run: npm run lint
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Lint
+              run: npm run lint
 
-  format:
-    name: Format check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Format check (Prettier)
-        run: npm run format
+    format:
+        name: Format check
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Format check (Prettier)
+              run: npm run format
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: [lint, format]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Run tests
-        run: npm test
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage
-      - name: Generate coverage badge (artifact and file)
-        run: |
-          npm run coverage:badge
-          mkdir -p badges
-          # list badge to debug
-          ls -la badges || true
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        needs: [lint, format]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Run tests
+              run: npm test
+            - name: Upload coverage artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage
+            - name: Generate coverage badge (artifact and file)
+              run: |
+                  npm run coverage:badge
+                  mkdir -p badges
+                  # list badge to debug
+                  ls -la badges || true
 
-  package:
-    name: Package
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Run packaging
-        run: npm run package
-      - name: Upload package
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-package
-          path: ./*.tgz
+    package:
+        name: Package
+        runs-on: ubuntu-latest
+        needs: [test]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Run packaging
+              run: npm run package
+            - name: Upload package
+              uses: actions/upload-artifact@v4
+              with:
+                  name: npm-package
+                  path: ./*.tgz
 
-  release:
-    name: Create Release (tag short hash)
-    needs: package
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Get short commit hash
-        id: vars
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Check for code changes
-        id: changes
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            code:
-              - 'injector/**'
-              - 'package.json'
-              - '*.hbs'
-              - 'assets/**'
-              - '*.js'
+    release:
+        name: Create Release (tag short hash)
+        needs: package
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Get short commit hash
+              id: vars
+              run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            - name: Check for code changes
+              id: changes
+              uses: dorny/paths-filter@v2
+              with:
+                  filters: |
+                      code:
+                        - 'injector/**'
+                        - 'package.json'
+                        - '*.hbs'
+                        - 'assets/**'
+                        - '*.js'
 
-      - name: Create tag and push
-        if: steps.changes.outputs.code == 'true'
-        env:
-          TAG_NAME: v${{ steps.vars.outputs.short_sha }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
-          git push origin --tags || echo "tags push failed"
-      - name: Download coverage-report artifact
-        if: steps.changes.outputs.code == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage
-      - name: Use Node.js for badge generation
-        if: steps.changes.outputs.code == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies for badge
-        if: steps.changes.outputs.code == 'true'
-        run: npm install
-      - name: Generate coverage badge in release
-        if: steps.changes.outputs.code == 'true'
-        run: |
-          npm run coverage:badge
-      - name: Commit coverage badge
-        if: steps.changes.outputs.code == 'true'
-        run: |
-          if [ -f badges/coverage.svg ]; then
-            git add badges/coverage.svg || true
-            if git diff --staged --quiet; then
-              echo "No badge changes to commit"
-            else
-              git config user.name "github-actions[bot]"
-              git config user.email "github-actions[bot]@users.noreply.github.com"
-              git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no commit"
-              git push origin main || echo "push failed"
-            fi
-          fi
-      - name: Download package artifact
-        if: steps.changes.outputs.code == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: npm-package
-      - name: Create GitHub release
-        if: steps.changes.outputs.code == 'true'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.vars.outputs.short_sha }}
-          release_name: Release v${{ steps.vars.outputs.short_sha }}
-          body: |-
-            Auto-generated release from workflow. Short commit v${{ steps.vars.outputs.short_sha }}.
-          draft: false
-          prerelease: false
-      - name: Upload package to release
-        if: steps.changes.outputs.code == 'true'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: '*.tgz'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Create tag and push
+              if: steps.changes.outputs.code == 'true'
+              env:
+                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+                  git push origin --tags || echo "tags push failed"
+            - name: Download coverage-report artifact
+              if: steps.changes.outputs.code == 'true'
+              uses: actions/download-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage
+            - name: Use Node.js for badge generation
+              if: steps.changes.outputs.code == 'true'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies for badge
+              if: steps.changes.outputs.code == 'true'
+              run: npm install
+            - name: Generate coverage badge in release
+              if: steps.changes.outputs.code == 'true'
+              run: |
+                  npm run coverage:badge
+            - name: Commit coverage badge
+              if: steps.changes.outputs.code == 'true'
+              run: |
+                  if [ -f badges/coverage.svg ]; then
+                    git add badges/coverage.svg || true
+                    if git diff --staged --quiet; then
+                      echo "No badge changes to commit"
+                    else
+                      git config user.name "github-actions[bot]"
+                      git config user.email "github-actions[bot]@users.noreply.github.com"
+                      git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no commit"
+                      git push origin main || echo "push failed"
+                    fi
+                  fi
+            - name: Download package artifact
+              if: steps.changes.outputs.code == 'true'
+              uses: actions/download-artifact@v4
+              with:
+                  name: npm-package
+            - name: Create GitHub release
+              if: steps.changes.outputs.code == 'true'
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.vars.outputs.short_sha }}
+                  release_name: Release v${{ steps.vars.outputs.short_sha }}
+                  body: |-
+                      Auto-generated release from workflow. Short commit v${{ steps.vars.outputs.short_sha }}.
+                  draft: false
+                  prerelease: false
+            - name: Upload package to release
+              if: steps.changes.outputs.code == 'true'
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: '*.tgz'
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  manual_release:
-    name: Manual Release (workflow_dispatch)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Build package
-        run: npm run package
-      - name: Get short commit hash
-        id: vars
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Create tag and push
-        env:
-          TAG_NAME: v${{ steps.vars.outputs.short_sha }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
-          git push origin --tags || echo "tags push failed"
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.vars.outputs.short_sha }}
-          release_name: Manual release v${{ steps.vars.outputs.short_sha }}
-          body: |-
-            Manual release triggered via workflow_dispatch. Short commit: v${{ steps.vars.outputs.short_sha }}.
-          draft: false
-          prerelease: false
-      - name: Upload package to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: '*.tgz'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    manual_release:
+        name: Manual Release (workflow_dispatch)
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Build package
+              run: npm run package
+            - name: Get short commit hash
+              id: vars
+              run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            - name: Create tag and push
+              env:
+                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+                  git push origin --tags || echo "tags push failed"
+            - name: Create GitHub release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.vars.outputs.short_sha }}
+                  release_name: Manual release v${{ steps.vars.outputs.short_sha }}
+                  body: |-
+                      Manual release triggered via workflow_dispatch. Short commit: v${{ steps.vars.outputs.short_sha }}.
+                  draft: false
+                  prerelease: false
+            - name: Upload package to release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: '*.tgz'
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

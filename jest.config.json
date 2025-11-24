@@ -1,8 +1,6 @@
 {
-  "testEnvironment": "jsdom",
-  "coverageDirectory": "coverage",
-  "testMatch": ["**/__tests__/**/*.test.js"],
-  "collectCoverageFrom": ["injector/**/*.js"]
-  ,
-  
+    "testEnvironment": "jsdom",
+    "coverageDirectory": "coverage",
+    "testMatch": ["**/__tests__/**/*.test.js"],
+    "collectCoverageFrom": ["injector/**/*.js"]
 }

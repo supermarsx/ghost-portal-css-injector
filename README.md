@@ -10,11 +10,9 @@ Portal stylesheet injector for Ghost CMS
 [![GitHub Downloads](https://img.shields.io/github/downloads/supermarsx/ghost-portal-css-injector/total.svg?style=flat-square&label=Downloads)](https://codeload.github.com/supermarsx/ghost-portal-css-injector/zip/refs/heads/main)
 [![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/supermarsx/ghost-portal-css-injector?style=flat-square&label=Issues)](#)
 
-
 [![coverage](https://raw.githubusercontent.com/supermarsx/ghost-portal-css-injector/main/badges/coverage.svg)](https://github.com/supermarsx/ghost-portal-css-injector)
 
 [**[Download this repository]**](https://codeload.github.com/supermarsx/ghost-portal-css-injector/zip/refs/heads/main)
-
 
 This is an stylesheet injector "engine" to insert new or override current styles within portal elements that make up the portal plugin in Ghost CMS. This injector allow you to change styling in everything within the portal functionality from the button to login and subscription.
 
@@ -58,47 +56,48 @@ After placing those files in their respective locations you should open each one
 Follow these steps to add the injector to a Ghost theme. This will inject `portal.css` and (optionally) fonts into the portal iframe so the Portal UI can be styled without cloning or rebuilding the portal repo.
 
 1. Copy the files into your theme's assets folder:
-
-	- `injector/style-injection.js` -> `assets/js/style-injection.js`
-	- `injector/portal.css` -> `assets/built/portal.css`
+    - `injector/style-injection.js` -> `assets/js/style-injection.js`
+    - `injector/portal.css` -> `assets/built/portal.css`
 
 2. Include the portal stylesheet in your theme head with a version query string. The injector extracts the version string from `?v=` in the URL and uses it to build the injection link for portal iframes. Add the link to `partials/head.hbs` or your theme `default.hbs` head block:
 
-	```html
-	<link rel="stylesheet" href="{{asset "built/portal.css"}}?v=1" />
-	```
-
+    ```html
+    <link rel="stylesheet" href="{{asset "built/portal.css"}}?v=1" />
+    ```
 
 3. Add and include the injector script in your theme (best placed before the closing `</body>` tag). For example, drop it in `partials/footer.hbs` or `default.hbs`:
 
-	```html
-	<script src="{{asset "js/style-injection.js"}}"></script>
+    ```html
+    <script src="{{asset "js/style-injection.js"}}"></script>
 
-	The script runs at `window.onload` and automatically scans the page for the portal root element, finds the versioned stylesheet in the `head`, and injects the CSS into all portal iframes.
+    The script runs at `window.onload` and automatically scans the page for the portal root element, finds the versioned stylesheet in the `head`, and injects the CSS into all portal iframes.
+
+    ```
 
 4. If you want to inject font assets into the portal iframe head, add a `injection-type="font"` attribute to your font elements in the theme `head`. For example:
 
-	Quick autofix (try these to apply changes):
+    Quick autofix (try these to apply changes):
 
-	```bash
-	npm run lint:fix
-	npm run format:fix
-	```
-	<link rel="preload" href="{{asset "fonts/MyFont.woff2"}}" as="font" type="font/woff2" crossorigin injection-type="font">
-	```
+    ```bash
+    npm run lint:fix
+    npm run format:fix
+    ```
 
-	The injector will clone marked font elements and insert them in the portal iframes.
+    <link rel="preload" href="{{asset "fonts/MyFont.woff2"}}" as="font" type="font/woff2" crossorigin injection-type="font">
+    ```
+
+    The injector will clone marked font elements and insert them in the portal iframes.
 
 5. Optional: Customize `style-injection.js`'s `config` object to change selectors, enable/disable features, or adjust watcher/observer behavior. The script contains comments explaining each option.
 
 6. Test the theme:
-
-	- Build and upload your theme to Ghost.
-	- Visit the site and open the portal (sign in / membership modal).
-	- Check the portal UI; your `portal.css` changes should be applied.
-	- For debugging/verification, open the browser console and check for log messages from the injector (the script has a log mode that can be toggled via `config.log.enabled`).
+    - Build and upload your theme to Ghost.
+    - Visit the site and open the portal (sign in / membership modal).
+    - Check the portal UI; your `portal.css` changes should be applied.
+    - For debugging/verification, open the browser console and check for log messages from the injector (the script has a log mode that can be toggled via `config.log.enabled`).
 
 Notes:
+
 - The injector looks for the first versioned resource in the HTML head using a `?v=` query — ensure the `portal.css` link is present in the head to guarantee version extraction and consistent injection.
 - If you change versions frequently, bump the `?v=` value to force the injector to use the new file.
 - If your theme uses a CSS/JS build pipeline, add the files to your build output folders accordingly (e.g., `assets/built/` and `assets/js/`).
@@ -116,6 +115,7 @@ This repository contains a GitHub Actions pipeline (see `.github/workflows/ci.ym
 The release job tags the current commit with the short SHA tag format `v<short_sha>` (example: `v1a2b3c`) and creates a GitHub release with the packaged artifact attached.
 
 Automatic release behavior
+
 - The automatic release job runs only on pushes to `main` and will only create a release if there are code changes in relevant files (`injector/**`, `package.json`, `assets/**`, `*.js`, `*.hbs`). This prevents releases on documentation-only changes or other unrelated edits.
 - If you'd like to force a release regardless of changed paths, use the 'Manual Release' workflow dispatch trigger which will create a release for the current commit and upload the packaged artifact.
 

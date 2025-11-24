@@ -61,7 +61,9 @@ describe('Injection routines', () => {
 
         const appendSpy = jest.spyOn(iframe.contentWindow.document.head, 'appendChild');
         const originalCheck = injector.inject.check.isLinkInjected;
-        injector.inject.check.isLinkInjected = function () { return false; };
+        injector.inject.check.isLinkInjected = function () {
+            return false;
+        };
 
         injector.inject.linkElement({ iframe });
 
@@ -92,7 +94,9 @@ describe('Injection routines', () => {
         document.head.appendChild(font);
         injector.onload.initialSetup();
         const clonedFonts = injector.element.cloneAll({ elementHandleCollection: injector.builtFontElementCollection });
-        clonedFonts.forEach(function(f) { iframeDoc.head.appendChild(f); });
+        clonedFonts.forEach(function (f) {
+            iframeDoc.head.appendChild(f);
+        });
         const fontCount = clonedFonts.length;
         expect(injector.inject.check.areFontsInjected({ iframe, fontCount })).toBe(true);
     });

@@ -1,28 +1,25 @@
 {
-  "env": {
-    "browser": true,
-    "es2021": true,
-    "node": true
-  },
-  "extends": [
-    "eslint:recommended",
-    "plugin:prettier/recommended"
-  ],
-  "parserOptions": {
-    "ecmaVersion": 2022,
-    "sourceType": "module"
-  },
-  "rules": {
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "no-undef": "off",
-    "no-console": "off",
-    "eqeqeq": "error",
-    "prefer-const": "error",
-    "consistent-return": "error",
-    "curly": ["error", "multi-line"],
-    "no-var": "error",
-    "indent": ["error", 4],
-    "quotes": ["error", "single"],
-    "semi": ["error", "always"]
-  }
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+    "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+    },
+    "rules": {
+        "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+        "no-undef": "off",
+        "no-console": "off",
+        "eqeqeq": "error",
+        "prefer-const": "error",
+        "consistent-return": "error",
+        "curly": ["error", "multi-line"],
+        "no-var": "error",
+        "indent": ["error", 4],
+        "quotes": ["error", "single"],
+        "semi": ["error", "always"]
+    }
 }

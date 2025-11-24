@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+// removed unused require statements (fs, path)
 
 const injector = require('../injector/style-injection.js');
 

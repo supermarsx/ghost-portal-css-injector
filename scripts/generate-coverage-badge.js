@@ -10,16 +10,14 @@ const path = require('path');
 function readCoverageSummary() {
     const file = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
     if (!fs.existsSync(file)) {
-        console.error('Coverage summary not found at', file);
-        process.exit(1);
+        throw new Error(`Coverage summary not found at ${file}`);
     }
     const content = fs.readFileSync(file, 'utf8');
     try {
         const json = JSON.parse(content);
         return json;
     } catch (err) {
-        console.error('Invalid coverage summary JSON', err);
-        process.exit(1);
+        throw new Error('Invalid coverage summary JSON');
     }
 }
 
@@ -40,21 +38,23 @@ function generateSvg(percent) {
     const left = 'coverage';
     const right = `${percent}%`;
     // Basic simple SVG badge (lightweight inline template)
-    return `<?xml version="1.0" encoding="utf-8"?>\n` +
-`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="20" role="img" aria-label="Coverage: ${right}">` +
-`<linearGradient id="b" x2="0" y2="100%">` +
-`<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>` +
-`<stop offset="1" stop-opacity=".1"/>` +
-`</linearGradient>` +
-`<rect rx="3" width="120" height="20" fill="#555"/>` +
-`<rect rx="3" x="70" width="50" height="20" fill="${color}"/>` +
-`<path fill="${color}" d="M70 0h4v20h-4z"/>` +
-`<rect rx="3" width="120" height="20" fill="url(#b)"/>` +
-`<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">` +
-`<text x="35" y="14">${left}</text>` +
-`<text x="95" y="14">${right}</text>` +
-`</g>` +
-`</svg>`;
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n' +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="20" role="img" aria-label="Coverage: ${right}">` +
+        '<linearGradient id="b" x2="0" y2="100%">' +
+        '<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>' +
+        '<stop offset="1" stop-opacity=".1"/>' +
+        '</linearGradient>' +
+        '<rect rx="3" width="120" height="20" fill="#555"/>' +
+        `<rect rx="3" x="70" width="50" height="20" fill="${color}"/>` +
+        `<path fill="${color}" d="M70 0h4v20h-4z"/>` +
+        '<rect rx="3" width="120" height="20" fill="url(#b)"/>' +
+        '<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">' +
+        `<text x="35" y="14">${left}</text>` +
+        `<text x="95" y="14">${right}</text>` +
+        '</g>' +
+        '</svg>'
+    );
 }
 
 function writeBadge(svg) {
@@ -66,10 +66,15 @@ function writeBadge(svg) {
 }
 
 function main() {
-    const summary = readCoverageSummary();
-    const percent = getCoveragePercent(summary);
-    const svg = generateSvg(percent);
-    writeBadge(svg);
+    try {
+        const summary = readCoverageSummary();
+        const percent = getCoveragePercent(summary);
+        const svg = generateSvg(percent);
+        writeBadge(svg);
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 }
 
 main();
