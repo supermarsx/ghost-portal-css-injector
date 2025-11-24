@@ -108,19 +108,19 @@ jobs:
             - name: Publish package to npm (conditional)
               if: ${{ steps.changes.outputs.code == 'true' }}
               env:
-                NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: |
-                if [ -z "${NPM_TOKEN}" ]; then
-                  echo "NPM_TOKEN not set; skipping npm publish"
-                  exit 0
-                fi
-                PRIVATE=$(node -e "console.log(require('./package.json').private)")
-                  if [ "$PRIVATE" = "true" ]; then
-                    echo "package.json is private; skipping npm publish"
+                  if [ -z "${NPM_TOKEN}" ]; then
+                    echo "NPM_TOKEN not set; skipping npm publish"
                     exit 0
                   fi
-                  echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-                  npm publish --access public || npm publish
+                  PRIVATE=$(node -e "console.log(require('./package.json').private)")
+                    if [ "$PRIVATE" = "true" ]; then
+                      echo "package.json is private; skipping npm publish"
+                      exit 0
+                    fi
+                    echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+                    npm publish --access public || npm publish
 
             - name: Create GitHub release
               if: ${{ steps.changes.outputs.code == 'true' }}
