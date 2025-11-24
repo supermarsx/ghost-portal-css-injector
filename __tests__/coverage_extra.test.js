@@ -248,6 +248,30 @@ describe('Coverage extra tests for uncovered branches', () => {
         logSpy.mockRestore();
     });
 
+    test('observer.clear handles disconnect throwing and clears tempObservers', () => {
+        // Create a fake observer current that throws on disconnect
+        config.observer.current = {
+            disconnect: () => {
+                throw new Error('disconnect failed');
+            },
+        };
+        // Create a temp observer in the array that throws on disconnect
+        config.observer.tempObservers = [
+            {
+                disconnect: () => {
+                    throw new Error('temp disconnect failed');
+                },
+            },
+        ];
+        // Ensure no previous _shutdown
+        config._shutdown = false;
+        // Should not throw and should clear the tempObservers & set current to null
+        expect(() => observer.clear()).not.toThrow();
+        expect(Array.isArray(config.observer.tempObservers)).toBeTruthy();
+        expect(config.observer.tempObservers.length).toBe(0);
+        expect(config.observer.current).toBeNull();
+    });
+
     test('onload.setupEvent throws when window.addEventListener throws', () => {
         // Backup original
         global.__originalAddEventListener = window.addEventListener;
