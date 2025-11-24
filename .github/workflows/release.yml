@@ -1,0 +1,140 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ['Package']
+    types: [completed]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release (tag short hash)
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get short commit hash
+        id: vars
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Check for code changes
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            code:
+              - 'injector/**'
+              - 'package.json'
+              - '*.hbs'
+              - 'assets/**'
+              - '*.js'
+
+      - name: Create tag and push
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        env:
+          TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+          git push origin --tags || echo "tags push failed"
+
+      - name: Download coverage artifact
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Generate coverage badge
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (for badge)
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        run: npm ci
+
+      - name: Create badge file
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        run: npm run coverage:badge
+
+      - name: Commit coverage badge
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        run: |
+          if [ -f badges/coverage.svg ]; then
+            git add badges/coverage.svg || true
+            if git diff --staged --quiet; then
+              echo "No badge changes to commit"
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no commit"
+              git push origin main || echo "push failed"
+            fi
+          fi
+
+      - name: Download package artifact
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+
+      - name: Prepare package artifact for publish
+        if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+        run: |
+          mkdir -p pkg
+          mv *.tgz pkg/ 2>/dev/null || true
+
+      - name: Use Node.js for npm publish
+        if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies for npm publish
+        if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+        run: npm ci
+
+      - name: Publish package to npm (conditional)
+        if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          PRIVATE=$(node -e "console.log(require('./package.json').private)")
+          if [ "$PRIVATE" = "true" ]; then
+            echo "package.json is private; skipping npm publish"
+            exit 0
+          fi
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm publish --access public || npm publish
+
+      - name: Create GitHub release
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.vars.outputs.short_sha }}
+          release_name: Release v${{ steps.vars.outputs.short_sha }}
+          body: |-
+            Auto-generated release from workflow. Short commit v${{ steps.vars.outputs.short_sha }}.
+          draft: false
+          prerelease: false
+
+      - name: Upload package to release
+        if: ${{ steps.changes.outputs.code == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: 'pkg/*.tgz'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

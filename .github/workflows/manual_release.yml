@@ -1,0 +1,53 @@
+name: Manual Release (workflow_dispatch)
+
+on:
+    workflow_dispatch: {}
+
+permissions:
+    contents: write
+
+jobs:
+    manual_release:
+        name: Manual Release
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+            - name: Install dependencies
+              run: npm install
+            - name: Build package
+              run: npm run package
+            - name: Get short commit hash
+              id: vars
+              run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            - name: Create tag and push
+              env:
+                  TAG_NAME: v${{ steps.vars.outputs.short_sha }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
+                  git push origin --tags || echo "tags push failed"
+            - name: Create GitHub release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.vars.outputs.short_sha }}
+                  release_name: Manual release v${{ steps.vars.outputs.short_sha }}
+                  body: |-
+                      Manual release triggered via workflow_dispatch. Short commit: v${{ steps.vars.outputs.short_sha }}.
+                  draft: false
+                  prerelease: false
+            - name: Upload package to release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: '*.tgz'
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

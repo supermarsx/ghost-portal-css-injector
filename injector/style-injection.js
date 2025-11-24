@@ -190,7 +190,7 @@ let builtFontElementCollection = null;
  * Lightweight logging helper for the injector.
  *
  * This class provides configurable logging behavior (info/warning/error) and
- * formats messages with timestamps and level tags. Use `_log({ message, level })`
+ * formats messages with timestamps and level tags. Use `_logProxy({ message, level })`
  * as a proxy to create logs without `new`.
  */
 class log {
@@ -258,7 +258,7 @@ class log {
      * @returns {void}
      */
     static setLogLevel({ level }) {
-        _log({ message: `Setting log level to ${level}` });
+        _logProxy({ message: `Setting log level to ${level}` });
         if (LOG_LEVELS[level] !== undefined) {
             config.log.level = level;
         } else {
@@ -291,7 +291,7 @@ class log {
 }
 
 /* Log function proxy, avoid needing to use new keyword when calling the log constructor */
-const _log = new Proxy(log, {
+const _logProxy = new Proxy(log, {
     apply(target, thisArg, argumentsList) {
         return new target(...argumentsList);
     },
@@ -316,13 +316,13 @@ class version {
             const splitCharacter = '?';
             const splitIndex = 1;
             const parameter = 'v';
-            _log({ message: `Getting version from url, ${url}`, level: 'info' });
+            _logProxy({ message: `Getting version from url, ${url}`, level: 'info' });
             const urlParams = new URLSearchParams(url.split(splitCharacter)[splitIndex]);
             return urlParams.get(parameter).toString();
         } catch (error) {
             const message = 'Failed to get version from URL';
             const cause = error;
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             return '';
         }
     }
@@ -336,7 +336,7 @@ class version {
      */
     static getAllFromHead() {
         try {
-            _log({ message: 'Extracting file versions from head', level: 'info' });
+            _logProxy({ message: 'Extracting file versions from head', level: 'info' });
             const head = document.head;
             const versionedFiles = [];
             const selector = config.version.selector;
@@ -345,9 +345,9 @@ class version {
             /* Check <link>, <script>, and <style> tags in the head */
             const elements = [...head.querySelectorAll(selector)];
             const elementCount = elements.length;
-            _log({ message: `Found ${elementCount} element(s) using selector: "${selector}"`, level: 'info' });
+            _logProxy({ message: `Found ${elementCount} element(s) using selector: "${selector}"`, level: 'info' });
 
-            _log({ message: 'Going through each element in the head', level: 'info' });
+            _logProxy({ message: 'Going through each element in the head', level: 'info' });
             elements.forEach(function (element) {
                 const tagLink = TAGS.link;
                 const tagScript = TAGS.script;
@@ -372,7 +372,7 @@ class version {
             const stringExtract = versionedFiles[0].url.toString().substring(extractMin, extractMax);
             const firstFileVersion = versionedFiles[0].urlVersion.toString();
 
-            _log({
+            _logProxy({
                 message: `Got versioned files from head, example: ${stringExtract}... ${firstFileVersion}`,
                 level: 'info',
             });
@@ -382,7 +382,7 @@ class version {
             const message = 'Failed to extract file versions from head';
             const cause = error;
             console.trace();
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             throw new Error(message, cause);
         }
     }
@@ -392,10 +392,10 @@ class version {
      * @returns {string|null} The first version string or null if none found
      */
     static getFirst() {
-        _log({ message: 'Get the first available version from head', level: 'info' });
+        _logProxy({ message: 'Get the first available version from head', level: 'info' });
         const versionedFiles = version.getAllFromHead();
         const firstVersion = versionedFiles.length > 0 ? versionedFiles[0].urlVersion : null;
-        _log({ message: `First version from head is ${firstVersion}`, level: 'info' });
+        _logProxy({ message: `First version from head is ${firstVersion}`, level: 'info' });
         return firstVersion;
     }
 }
@@ -503,7 +503,7 @@ class element {
             const selectorIframe = config.selector.iframes;
             const iframes = element.getAll({ selector: selectorIframe });
             const iframeCount = iframes.length;
-            _log({ message: `Found ${iframeCount} iframe(s).`, level: 'info' });
+            _logProxy({ message: `Found ${iframeCount} iframe(s).`, level: 'info' });
             return iframes;
         } catch (error) {
             const message = 'Failed to get all portal iframes.';
@@ -522,7 +522,7 @@ class element {
             const selectorFonts = config.selector.fonts;
             const fonts = element.getAll({ selector: selectorFonts });
             const fontsLength = fonts.length;
-            _log({ message: `Found ${fontsLength} font element(s).`, level: 'info' });
+            _logProxy({ message: `Found ${fontsLength} font element(s).`, level: 'info' });
             return fonts;
         } catch (error) {
             const message = 'Failed to get all portal iframes.';
@@ -645,7 +645,7 @@ class element {
      * @returns {Promise<Element>} Promise that resolves with the element or rejects on timeout
      */
     static wait({ selector = element.default.selector, timeout = element.default.timeout }) {
-        _log({ message: `Waiting for element selector: ${selector} with timeout of ${timeout}` });
+        _logProxy({ message: `Waiting for element selector: ${selector} with timeout of ${timeout}` });
         return new Promise(function (resolve, reject) {
             const elementObject = element.get({ selector });
             if (elementObject instanceof Element) resolve(elementObject);
@@ -666,7 +666,7 @@ class element {
             const timeoutChecker = setTimeout(function () {
                 observer.disconnect();
                 const message = 'Timed out waiting for element.';
-                _log({ message: `${message}`, level: 'warning' });
+                _logProxy({ message: `${message}`, level: 'warning' });
                 reject(message);
             }, timeout);
         });
@@ -687,7 +687,7 @@ class element {
         count = element.default.waitAllCount,
         mode = element.default.waitAllMode,
     }) {
-        _log({
+        _logProxy({
             message: `Waiting for all elements with selector: ${selector} with timeout of ${timeout} using count of ${count} and mode ${mode}`,
         });
         return new Promise(function (resolve, reject) {
@@ -746,7 +746,7 @@ class element {
                 timeoutChecker = setTimeout(function () {
                     observer.disconnect();
                     const message = 'Timed out waiting for all the elements';
-                    _log({ message: `${message}`, level: 'warning' });
+                    _logProxy({ message: `${message}`, level: 'warning' });
                     reject(message);
                 }, timeout);
             } catch (error) {
@@ -769,7 +769,7 @@ class element {
          */
         static link({ url = element.default.url }) {
             try {
-                _log({ message: 'Creating link element', level: 'info' });
+                _logProxy({ message: 'Creating link element', level: 'info' });
 
                 const elementType = 'link';
                 const linkType = 'text/css';
@@ -780,13 +780,13 @@ class element {
                 linkElement.rel = typeRel;
                 linkElement.href = url;
 
-                _log({ message: `Created link element with href ${linkElement.href}`, level: 'info' });
+                _logProxy({ message: `Created link element with href ${linkElement.href}`, level: 'info' });
 
                 return linkElement;
             } catch (error) {
                 const message = 'Failed to create link element';
                 const cause = error;
-                _log({ message: `${message} due to ${cause}`, level: 'error' });
+                _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
                 throw new Error(message, cause);
             }
         }
@@ -803,7 +803,7 @@ class element {
          * @returns {HTMLLinkElement} A prepared stylesheet link element
          */
         static link() {
-            _log({ message: 'Building stylesheet element', level: 'info' });
+            _logProxy({ message: 'Building stylesheet element', level: 'info' });
             const firstVersion = version.getFirst();
             const urlPrefix = config.stylesheet.url.prefix;
             const url = `${urlPrefix}${firstVersion}`;
@@ -817,7 +817,7 @@ class element {
          * @returns {Array<Element>} Array with cloned font elements
          */
         static fontCollection() {
-            _log({ message: 'Building font collection', level: 'info' });
+            _logProxy({ message: 'Building font collection', level: 'info' });
             const fontElementHandleCollection = element.getAllFonts();
             const fontElementCloneCollection = element.cloneAll({
                 elementHandleCollection: fontElementHandleCollection,
@@ -851,7 +851,7 @@ class watcher {
         config.watcher.timer.end = Date.now() + config.watcher.timer.limit;
         config.watcher.current = setInterval(function () {
             config.watcher.cycleCount++;
-            _log({ message: `Watcher cycle count: ${config.watcher.cycleCount}`, level: 'info' });
+            _logProxy({ message: `Watcher cycle count: ${config.watcher.cycleCount}`, level: 'info' });
             const iframes = element.getAllIframes();
             iframes.forEach(function (iframe) {
                 inject.everything({ iframe });
@@ -899,32 +899,35 @@ class inject {
             const iframeName = element.getIframeName({ iframe });
             if (iframe.contentDocument && !inject.check.isLinkInjected({ iframe })) {
                 if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
-                _log({ message: `Injecting stylesheet using link element in iframe ${iframeName}`, level: 'info' });
+                _logProxy({
+                    message: `Injecting stylesheet using link element in iframe ${iframeName}`,
+                    level: 'info',
+                });
                 // Ensure a built link element exists; build on demand in tests
                 if (!builtLinkElement) builtLinkElement = element.build.link();
                 const link = element.clone({ elementHandle: builtLinkElement });
                 iframe.contentDocument.head.appendChild(link);
                 if (!inject.check.isLinkInjected({ iframe })) {
-                    _log({
+                    _logProxy({
                         message: 'Failed to inject using the main method, falling back to an alternative',
                         level: 'info',
                     });
                     iframe.contentWindow.document.head.appendChild(link);
                 }
-                _log({ message: `Injected stylesheet using link element in iframe ${iframeName}`, level: 'info' });
+                _logProxy({ message: `Injected stylesheet using link element in iframe ${iframeName}`, level: 'info' });
                 watcher.set();
             }
 
             const currentDate = Date.now();
 
             if (inject.check.isLinkInjected({ iframe }) && currentDate > config.watcher.timer.end) {
-                _log({ message: 'Link element is injected and timeout reached, clearing watcher', level: 'info' });
+                _logProxy({ message: 'Link element is injected and timeout reached, clearing watcher', level: 'info' });
                 watcher.clear();
             }
         } catch (error) {
             const message = 'Failed to do inject stylesheet routine, watcher auxiliary function';
             const cause = error;
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             if (config.errors.throwOnRegularInjectionFailure) throw new Error(message, cause);
         }
     }
@@ -946,7 +949,7 @@ class inject {
             const fontCount = config.inject.fontCountAuto ? element.countFonts() : config.inject.fontCount;
             if (iframe.contentDocument && !inject.check.areFontsInjected({ iframe, fontCount: fontCount })) {
                 if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
-                _log({ message: `Injecting font element collection in iframe ${iframeName}`, level: 'info' });
+                _logProxy({ message: `Injecting font element collection in iframe ${iframeName}`, level: 'info' });
                 // Ensure we have built font collection and build it on demand if not set
                 if (!builtFontElementCollection || builtFontElementCollection.length === 0) {
                     builtFontElementCollection = element.build.fontCollection();
@@ -955,7 +958,7 @@ class inject {
                 fontCollection.forEach(function (fontElement) {
                     iframe.contentDocument.head.appendChild(fontElement);
                 });
-                _log({ message: 'Injected font element collection', level: 'info' });
+                _logProxy({ message: 'Injected font element collection', level: 'info' });
                 if (config.inject.setWatcherOnFont) watcher.set();
             }
 
@@ -966,7 +969,7 @@ class inject {
                     inject.check.areFontsInjected({ iframe, fontCount: config.selector.fontCount }) &&
                     currentDate > config.watcher.timer.end
                 ) {
-                    _log({
+                    _logProxy({
                         message: 'Font element collection is injected and timeout reached, clearing watcher',
                         level: 'info',
                     });
@@ -976,7 +979,7 @@ class inject {
         } catch (error) {
             const message = 'Failed to do inject font collection routine, watcher auxiliary function';
             const cause = error;
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             if (config.errors.throwOnRegularInjectionFailure) throw new Error(message, cause);
         }
     }
@@ -1033,14 +1036,14 @@ class inject {
             if (!config.inject.firstTime.enabled) return;
             if (!config.inject.firstTime.style) return;
             try {
-                _log({ message: 'Doing a first time stylesheet injection routine', level: 'info' });
+                _logProxy({ message: 'Doing a first time stylesheet injection routine', level: 'info' });
                 const iframes = element.getAllIframes();
                 inject.iframeCollection.linkElement({ iframes });
-                _log({ message: 'Done doing a first time stylesheet injection', level: 'info' });
+                _logProxy({ message: 'Done doing a first time stylesheet injection', level: 'info' });
             } catch (error) {
                 const message = 'Failed to do a first time stylesheet injection routine';
                 const cause = error;
-                _log({ message: `${message} due to ${cause}`, level: 'error' });
+                _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
                 if (config.errors.throwOnFirstTimeInjectionFailure) throw new Error(message, cause);
             }
         }
@@ -1055,14 +1058,14 @@ class inject {
             if (!config.inject.firstTime.enabled) return;
             if (!config.inject.firstTime.fonts) return;
             try {
-                _log({ message: 'Doing a first time font collection injection routine', level: 'info' });
+                _logProxy({ message: 'Doing a first time font collection injection routine', level: 'info' });
                 const iframes = element.getAllIframes();
                 inject.iframeCollection.fontElementCollection({ iframes });
-                _log({ message: 'Done doing a first time font collection injection', level: 'info' });
+                _logProxy({ message: 'Done doing a first time font collection injection', level: 'info' });
             } catch (error) {
                 const message = 'Failed to do a first time font collection injection routine';
                 const cause = error;
-                _log({ message: `${message} due to ${cause}`, level: 'error' });
+                _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
                 if (config.errors.throwOnFirstTimeInjectionFailure) throw new Error(message, cause);
             }
         }
@@ -1092,7 +1095,7 @@ class inject {
         static isLinkInjected({ iframe }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
-                _log({
+                _logProxy({
                     message: `Checking if link element is already injected in iframe ${iframeName}`,
                     level: 'info',
                 });
@@ -1102,7 +1105,7 @@ class inject {
                 const isLinkElementPresent = Array.from(links).some(function (link) {
                     return link.href === linkUrl;
                 });
-                _log({
+                _logProxy({
                     message: `Link element is${isLinkElementPresent ? '' : ' NOT'} present in iframe ${iframeName}.`,
                     level: 'info',
                 });
@@ -1110,7 +1113,7 @@ class inject {
             } catch (error) {
                 const message = 'Failed to check if link element is already injected into iframe';
                 const cause = error;
-                _log({ message: `${message} due to ${cause}`, level: 'warning' });
+                _logProxy({ message: `${message} due to ${cause}`, level: 'warning' });
                 if (config.errors.throwOnLinkInjectionCheckFailure) throw new Error(message, cause);
                 return false;
             }
@@ -1127,14 +1130,14 @@ class inject {
         static areFontsInjected({ iframe, fontCount }) {
             try {
                 const iframeName = element.getIframeName({ iframe });
-                _log({
+                _logProxy({
                     message: `Checking if font element collection is already injected in iframe ${iframeName}`,
                     level: 'info',
                 });
                 const fontCollectionSelector = config.selector.fonts;
                 const fontCollection = iframe.contentDocument.querySelectorAll(fontCollectionSelector);
                 const areFontsPresent = fontCollection.length === fontCount;
-                _log({
+                _logProxy({
                     message: `Font element collection is${areFontsPresent ? '' : ' NOT'} present in iframe ${iframeName}`,
                     level: 'info',
                 });
@@ -1142,7 +1145,7 @@ class inject {
             } catch (error) {
                 const message = 'Failed to check if font element collection is already injected into iframe';
                 const cause = error;
-                _log({ message: `${message} due to ${cause}`, level: 'warning' });
+                _logProxy({ message: `${message} due to ${cause}`, level: 'warning' });
                 if (config.errors.throwOnLinkInjectionCheckFailure) throw new Error(message, cause);
                 return false;
             }
@@ -1167,13 +1170,13 @@ class observer {
     static async setup() {
         try {
             if (!config.observer.enabled) return;
-            _log({ message: 'Setting up mutation observer', level: 'info' });
+            _logProxy({ message: 'Setting up mutation observer', level: 'info' });
             const selectorRootElement = config.selector.root;
             const rootElement = await element.wait({ selector: selectorRootElement });
 
             if (!rootElement) {
                 const message = `Failed to get root element ${selectorRootElement}`;
-                _log({ message, level: 'error' });
+                _logProxy({ message, level: 'error' });
                 throw new Error(message);
             }
 
@@ -1191,7 +1194,7 @@ class observer {
 
                         /* Check if an iframe is removed */
                         mutation.removedNodes.forEach(function (node) {
-                            if (node.tagName === TAGS.iframe) _log({ message: 'Iframe removed', level: 'info' });
+                            if (node.tagName === TAGS.iframe) _logProxy({ message: 'Iframe removed', level: 'info' });
                         });
                     }
                     const iframes = element.getAllIframes();
@@ -1201,16 +1204,16 @@ class observer {
                 }
             });
 
-            _log({ message: 'Configuring observer', level: 'info' });
+            _logProxy({ message: 'Configuring observer', level: 'info' });
 
             /* Configure the observer to watch for changes within #ghost-portal-root */
             mutationObserver.observe(rootElement, config.observer.initialization);
 
-            _log({ message: `Mutation observer was setup to watch for iframes in ${rootElement}`, level: 'info' });
+            _logProxy({ message: `Mutation observer was setup to watch for iframes in ${rootElement}`, level: 'info' });
         } catch (error) {
             const message = 'Failed to setup mutation observer';
             const cause = error;
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             throw new Error(message, cause);
         }
     }
@@ -1229,21 +1232,24 @@ class onload {
      * @returns {Promise<void>} Promise that resolves once initial setup runs
      */
     static async initialSetup() {
-        _log({ message: 'Doing injector initial setup', level: 'info' });
+        _logProxy({ message: 'Doing injector initial setup', level: 'info' });
         try {
-            _log({ message: 'DEBUG initialSetup: about to build link and fonts', level: 'info' });
+            _logProxy({ message: 'DEBUG initialSetup: about to build link and fonts', level: 'info' });
             builtLinkElement = element.build.link();
-            _log({
+            _logProxy({
                 message: `DEBUG initialSetup: builtLinkElement set to ${builtLinkElement ? builtLinkElement.href || builtLinkElement.toString() : builtLinkElement}`,
                 level: 'info',
             });
             builtFontElementCollection = element.build.fontCollection();
-            _log({
+            _logProxy({
                 message: `DEBUG initialSetup: builtFontElementCollection set length ${(builtFontElementCollection || []).length}`,
                 level: 'info',
             });
         } catch (err) {
-            _log({ message: `DEBUG initialSetup failed: ${err && err.message ? err.message : err}`, level: 'error' });
+            _logProxy({
+                message: `DEBUG initialSetup failed: ${err && err.message ? err.message : err}`,
+                level: 'error',
+            });
             throw err;
         }
     }
@@ -1255,13 +1261,13 @@ class onload {
      */
     static setupEvent() {
         try {
-            _log({ message: 'Setting window onload event', level: 'info' });
+            _logProxy({ message: 'Setting window onload event', level: 'info' });
             // Use addEventListener to avoid overriding existing onload handlers
             window.addEventListener('load', () => this.setupMonitor());
         } catch (error) {
             const message = 'Failed to set window onload event';
             const cause = error;
-            _log({ message: `${message} due to ${cause}`, level: 'error' });
+            _logProxy({ message: `${message} due to ${cause}`, level: 'error' });
             throw new Error(message, cause);
         }
     }
@@ -1272,10 +1278,10 @@ class onload {
      * @returns {void}
      */
     static setupMonitor() {
-        _log({ message: 'Doing onload setup routine', level: 'info' });
+        _logProxy({ message: 'Doing onload setup routine', level: 'info' });
         observer.setup();
         inject.firstTime.everything();
-        _log({ message: 'Done setting up onload monitor', level: 'info' });
+        _logProxy({ message: 'Done setting up onload monitor', level: 'info' });
     }
 }
 

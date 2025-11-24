@@ -1,13 +1,6 @@
-name: CI
+name: CI - disabled
 
 on:
-    push:
-        branches: [main]
-        # Ignore badge updates to prevent infinite badge-commit loops
-        paths-ignore:
-            - 'badges/**'
-    pull_request:
-        branches: [main]
     workflow_dispatch: {}
 
 permissions:
