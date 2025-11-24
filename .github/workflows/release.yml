@@ -89,28 +89,32 @@ jobs:
                   name: npm-package
 
             - name: Prepare package artifact for publish
-              if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+              if: ${{ steps.changes.outputs.code == 'true' }}
               run: |
                   mkdir -p pkg
                   mv *.tgz pkg/ 2>/dev/null || true
 
             - name: Use Node.js for npm publish
-              if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+              if: ${{ steps.changes.outputs.code == 'true' }}
               uses: actions/setup-node@v4
               with:
                   node-version: '20'
                   registry-url: 'https://registry.npmjs.org'
 
             - name: Install dependencies for npm publish
-              if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+              if: ${{ steps.changes.outputs.code == 'true' }}
               run: npm ci
 
             - name: Publish package to npm (conditional)
-              if: ${{ steps.changes.outputs.code == 'true' && secrets.NPM_TOKEN }}
+              if: ${{ steps.changes.outputs.code == 'true' }}
               env:
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: |
-                  PRIVATE=$(node -e "console.log(require('./package.json').private)")
+                if [ -z "${NPM_TOKEN}" ]; then
+                  echo "NPM_TOKEN not set; skipping npm publish"
+                  exit 0
+                fi
+                PRIVATE=$(node -e "console.log(require('./package.json').private)")
                   if [ "$PRIVATE" = "true" ]; then
                     echo "package.json is private; skipping npm publish"
                     exit 0
