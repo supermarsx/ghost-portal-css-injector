@@ -138,7 +138,7 @@ npm install
 npm test
 ```
 
-The repo includes a test suite that checks the injector script and validates behavior in a DOM-like environment (jsdom). The CI enforces 100% coverage for this code.
+The repo includes a test suite that checks the injector script and validates behavior in a DOM-like environment (jsdom). The CI reports coverage for the test run.
 
 ## Notes
 
