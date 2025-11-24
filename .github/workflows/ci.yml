@@ -3,9 +3,9 @@ name: CI
 on:
   push:
     branches: [ main ]
-      # Ignore badge updates to prevent infinite badge-commit loops
-      paths-ignore:
-        - 'badges/**'
+    # Ignore badge updates to prevent infinite badge-commit loops
+    paths-ignore:
+      - 'badges/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch: {}
@@ -64,12 +64,12 @@ jobs:
         with:
           name: coverage-report
           path: coverage
-        - name: Generate coverage badge (artifact and file)
-          run: |
-            npm run coverage:badge
-            mkdir -p badges
-            # list badge to debug
-            ls -la badges || true
+      - name: Generate coverage badge (artifact and file)
+        run: |
+          npm run coverage:badge
+          mkdir -p badges
+          # list badge to debug
+          ls -la badges || true
 
   package:
     name: Package
@@ -90,10 +90,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-package
-        - name: Download coverage badge
-          uses: actions/download-artifact@v4
-          with:
-            name: coverage-report
           path: ./*.tgz
 
   release:
@@ -130,7 +126,26 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
           git push origin --tags || echo "tags push failed"
+      - name: Download coverage-report artifact
+        if: steps.changes.outputs.code == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+      - name: Use Node.js for badge generation
+        if: steps.changes.outputs.code == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies for badge
+        if: steps.changes.outputs.code == 'true'
+        run: npm install
+      - name: Generate coverage badge in release
+        if: steps.changes.outputs.code == 'true'
+        run: |
+          npm run coverage:badge
       - name: Commit coverage badge
+        if: steps.changes.outputs.code == 'true'
         run: |
           if [ -f badges/coverage.svg ]; then
             git add badges/coverage.svg || true
