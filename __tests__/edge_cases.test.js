@@ -10,7 +10,9 @@ describe('Edge cases and uncovered branches', () => {
         injector.config.observer.tempObservers.length = 0;
         try {
             injector.watcher.clear();
-        } catch (err) {}
+        } catch (err) {
+            void err;
+        }
         injector.config.watcher.cycleCount = 0;
     });
 
@@ -47,7 +49,9 @@ describe('Edge cases and uncovered branches', () => {
     });
 
     test('element.waitAll should throw when count < 1', async () => {
-        await expect(injector.element.waitAll({ selector: '.x', count: 0 })).rejects.toThrow(/Failed to wait for all elements/);
+        await expect(injector.element.waitAll({ selector: '.x', count: 0 })).rejects.toThrow(
+            /Failed to wait for all elements/
+        );
     });
 
     test('element.build.link uses version even when getFirst is null', () => {
@@ -138,7 +142,11 @@ describe('Edge cases and uncovered branches', () => {
 
     test('observer.clear catches disconnect errors when current disconnect throws', () => {
         // Put object that throws on disconnect
-        const badObserver = { disconnect: () => { throw new Error('bad'); } };
+        const badObserver = {
+            disconnect: () => {
+                throw new Error('bad');
+            },
+        };
         injector.config.observer.current = badObserver;
         injector.config.observer.tempObservers.push({ disconnect: () => {} });
         // call clear, should not throw

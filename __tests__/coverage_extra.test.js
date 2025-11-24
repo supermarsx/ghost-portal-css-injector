@@ -83,13 +83,15 @@ describe('Coverage extra tests for uncovered branches', () => {
                 this.cb = cb;
                 this.target = null;
             }
-            observe(target) {
-                this.target = target;
+            observe(_target) {
+                this.target = _target;
                 // schedule callback to simulate a mutation record after the element is appended
                 setTimeout(() => {
                     try {
                         this.cb([]);
-                    } catch (e) {}
+                    } catch (e) {
+                        void e;
+                    }
                 }, 0);
             }
             disconnect() {
@@ -122,17 +124,21 @@ describe('Coverage extra tests for uncovered branches', () => {
             constructor(cb) {
                 this.cb = cb;
             }
-            observe(target) {
+            observe(_target) {
                 setTimeout(() => {
                     try {
                         this.cb([]);
-                    } catch (e) {}
+                    } catch (e) {
+                        void e;
+                    }
                 }, 0);
             }
             disconnect() {
                 throw new Error('disconnect failed');
             }
-            takeRecords() { return []; }
+            takeRecords() {
+                return [];
+            }
         }
         global.MutationObserver = FakeObserverAll;
 
@@ -163,8 +169,12 @@ describe('Coverage extra tests for uncovered branches', () => {
             constructor(cb) {
                 this.cb = cb;
             }
-            observe() {}
-            disconnect() {}
+            observe() {
+                void 0;
+            }
+            disconnect() {
+                void 0;
+            }
         }
         global.MutationObserver = FakeObserverCapture;
 
@@ -189,9 +199,15 @@ describe('Coverage extra tests for uncovered branches', () => {
         // Override MutationObserver to capture callback
         global.__originalMutationObserver = global.MutationObserver;
         class FakeObserverCapture2 {
-            constructor(cb) { this.cb = cb; }
-            observe() {}
-            disconnect() {}
+            constructor(cb) {
+                this.cb = cb;
+            }
+            observe() {
+                void 0;
+            }
+            disconnect() {
+                void 0;
+            }
         }
         global.MutationObserver = FakeObserverCapture2;
         await observer.setup();

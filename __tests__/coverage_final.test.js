@@ -90,7 +90,10 @@ describe('Final coverage tests to hit remaining branches', () => {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         let appendCount = 0;
         const origAppend = iframeDoc.head.appendChild;
-        iframeDoc.head.appendChild = function () { appendCount++; return origAppend.apply(this, arguments); };
+        iframeDoc.head.appendChild = function () {
+            appendCount++;
+            return origAppend.apply(this, arguments);
+        };
         // Ensure logs are verbose enough to include fallback info
         config.log.level = 'info';
         // Spy console.log before running so we can collect logs
@@ -101,7 +104,7 @@ describe('Final coverage tests to hit remaining branches', () => {
         expect(inject.check.isLinkInjected({ iframe })).toBe(false);
         // Pre-populate a built link element by using initialSetup so builtLinkElement is set
         const backup = document.head.innerHTML;
-        document.head.innerHTML = `<link href="http://localhost/assets/built/portal.css?v=abc" rel="stylesheet">`;
+        document.head.innerHTML = '<link href="http://localhost/assets/built/portal.css?v=abc" rel="stylesheet">';
         await injector.onload.initialSetup();
         // Run injection
         inject.linkElement({ iframe });
@@ -116,7 +119,9 @@ describe('Final coverage tests to hit remaining branches', () => {
     test('inject.linkElement rethrows when regular injection failure flag enabled (undefined iframe)', () => {
         config.errors.throwOnUndefinedIFrameLinkInjection = true;
         config.errors.throwOnRegularInjectionFailure = true;
-        expect(() => inject.linkElement({ iframe: undefined })).toThrow('Failed to do inject stylesheet routine, watcher auxiliary function');
+        expect(() => inject.linkElement({ iframe: undefined })).toThrow(
+            'Failed to do inject stylesheet routine, watcher auxiliary function'
+        );
         config.errors.throwOnUndefinedIFrameLinkInjection = false;
         config.errors.throwOnRegularInjectionFailure = false;
     });
@@ -152,7 +157,9 @@ describe('Final coverage tests to hit remaining branches', () => {
     test('inject.fontElementCollection rethrows when regular injection failure flag enabled (undefined iframe)', () => {
         config.errors.throwOnUndefinedIFrameFontInjection = true;
         config.errors.throwOnRegularInjectionFailure = true;
-        expect(() => inject.fontElementCollection({ iframe: undefined })).toThrow('Failed to do inject font collection routine, watcher auxiliary function');
+        expect(() => inject.fontElementCollection({ iframe: undefined })).toThrow(
+            'Failed to do inject font collection routine, watcher auxiliary function'
+        );
         config.errors.throwOnUndefinedIFrameFontInjection = false;
         config.errors.throwOnRegularInjectionFailure = false;
     });
@@ -219,9 +226,17 @@ describe('Final coverage tests to hit remaining branches', () => {
 
     test('observer.clear handles observer disconnect failure and clears temp observers', () => {
         // Set a current observer that throws on disconnect
-        config.observer.current = { disconnect: () => { throw new Error('boom'); } };
+        config.observer.current = {
+            disconnect: () => {
+                throw new Error('boom');
+            },
+        };
         // Populate tempObservers with an observer that throws on disconnect
-        const badTempObs = { disconnect: () => { throw new Error('boom2'); } };
+        const badTempObs = {
+            disconnect: () => {
+                throw new Error('boom2');
+            },
+        };
         config.observer.tempObservers = [badTempObs];
         const logSpy = jest.spyOn(console, 'log');
         injector.observer.clear();
@@ -234,7 +249,9 @@ describe('Final coverage tests to hit remaining branches', () => {
 
     test('onload.initialSetup throws if element.build.link fails', async () => {
         const origBuildLink = element.build.link;
-        jest.spyOn(element.build, 'link').mockImplementation(() => { throw new Error('link fail'); });
+        jest.spyOn(element.build, 'link').mockImplementation(() => {
+            throw new Error('link fail');
+        });
         await expect(injector.onload.initialSetup()).rejects.toThrow();
         element.build.link = origBuildLink;
     });

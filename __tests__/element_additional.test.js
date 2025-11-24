@@ -77,8 +77,12 @@ describe('Element utilities - additional tests', () => {
 
     test('element.get and getAll delegates to wait/waitAll when wait flags passed', async () => {
         // Spy on wait and waitAll
-        const waitSpy = jest.spyOn(injector.element, 'wait').mockImplementation(() => Promise.resolve(document.createElement('div')));
-        const waitAllSpy = jest.spyOn(injector.element, 'waitAll').mockImplementation(() => Promise.resolve(document.querySelectorAll('div')));
+        const waitSpy = jest
+            .spyOn(injector.element, 'wait')
+            .mockImplementation(() => Promise.resolve(document.createElement('div')));
+        const waitAllSpy = jest
+            .spyOn(injector.element, 'waitAll')
+            .mockImplementation(() => Promise.resolve(document.querySelectorAll('div')));
 
         await injector.element.get({ selector: '#will-appear', wait: true });
         await injector.element.getAll({ selector: '.will-appear', wait: true, count: 1 });
@@ -105,7 +109,9 @@ describe('Element utilities - additional tests', () => {
 
     test('element.waitAll rejects on timeout for non-appearing selector', async () => {
         injector.config.defaults.element.timeout = 50;
-        await expect(injector.element.waitAll({ selector: '#never-appears', count: 1, timeout: 100 })).rejects.toMatch(/Timed out waiting for all the elements/);
+        await expect(injector.element.waitAll({ selector: '#never-appears', count: 1, timeout: 100 })).rejects.toMatch(
+            /Timed out waiting for all the elements/
+        );
     });
 
     test('inject.firstTime.linkElement and fontElementCollection return early when flags disabled', async () => {

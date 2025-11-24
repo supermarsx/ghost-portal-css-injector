@@ -1,9 +1,8 @@
 /* Additional tests to reach previously uncovered branches */
 const path = require('path');
-const vm = require('vm');
-const fs = require('fs');
+// vm and fs were previously used for vm-based autostart testing; now we use the exported autostart helper
 const injector = require(path.resolve(__dirname, '..', 'injector', 'style-injection.js'));
-const { element, inject, observer, onload, config } = injector;
+const { element, inject, observer, config } = injector;
 
 describe('Coverage extra paths (error branches & autostart)', () => {
     afterEach(() => {
@@ -17,7 +16,7 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         // Stub element.get to throw only when called inside the MutationObserver callback
         let called = 0;
         const origGet = element.get;
-        jest.spyOn(element, 'get').mockImplementation(({ selector } = {}) => {
+        jest.spyOn(element, 'get').mockImplementation(({ selector: _selector } = {}) => {
             called++;
             // First call should be during initial check; return null. Second call inside observer callback should throw.
             if (called === 1) return null;
@@ -27,9 +26,15 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         // Patch MutationObserver to call callback asynchronously
         const origMO = global.MutationObserver;
         class FakeObserverCall {
-            constructor(cb) { this.cb = cb; }
-            observe() { setTimeout(() => this.cb([]), 0); }
-            disconnect() {}
+            constructor(cb) {
+                this.cb = cb;
+            }
+            observe() {
+                setTimeout(() => this.cb([]), 0);
+            }
+            disconnect() {
+                void 0;
+            }
         }
         global.MutationObserver = FakeObserverCall;
 
@@ -45,20 +50,28 @@ describe('Coverage extra paths (error branches & autostart)', () => {
     test('waitAll - logs error when element.getAll throws in MutationObserver callback', async () => {
         let called = 0;
         const origGetAll = element.getAll;
-        jest.spyOn(element, 'getAll').mockImplementation(({ selector } = {}) => {
+        jest.spyOn(element, 'getAll').mockImplementation(({ selector: _selector } = {}) => {
             called++;
             if (called === 1) return document.querySelectorAll(selector);
             throw new Error('Simulated getAll failure');
         });
         const origMO = global.MutationObserver;
         class FakeObserverCallAll {
-            constructor(cb) { this.cb = cb; }
-            observe() { setTimeout(() => this.cb([]), 0); }
-            disconnect() {}
+            constructor(cb) {
+                this.cb = cb;
+            }
+            observe() {
+                setTimeout(() => this.cb([]), 0);
+            }
+            disconnect() {
+                void 0;
+            }
         }
         global.MutationObserver = FakeObserverCallAll;
         config.defaults.element.timeout = 100;
-        await expect(element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 })).rejects.toBeDefined();
+        await expect(
+            element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 })
+        ).rejects.toBeDefined();
         global.MutationObserver = origMO;
         element.getAll = origGetAll;
     });
@@ -84,7 +97,9 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         config.errors.throwOnFirstTimeInjectionFailure = false;
         expect(() => inject.firstTime.fontElementCollection()).not.toThrow();
         config.errors.throwOnFirstTimeInjectionFailure = true;
-        expect(() => inject.firstTime.fontElementCollection()).toThrow('Failed to do a first time font collection injection routine');
+        expect(() => inject.firstTime.fontElementCollection()).toThrow(
+            'Failed to do a first time font collection injection routine'
+        );
         spy.mockRestore();
     });
 
@@ -102,9 +117,15 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         const origMO = global.MutationObserver;
         let cbRef;
         class FakeObserverCapture2 {
-            constructor(cb) { cbRef = cb; }
-            observe() {}
-            disconnect() {}
+            constructor(cb) {
+                cbRef = cb;
+            }
+            observe() {
+                void 0;
+            }
+            disconnect() {
+                void 0;
+            }
         }
         global.MutationObserver = FakeObserverCapture2;
         // Stub element.wait to resolve a root
@@ -113,7 +134,9 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         document.body.appendChild(root);
         // Spy getAllIframes to throw inside the callback
         const origGetAllIframes = element.getAllIframes;
-        jest.spyOn(element, 'getAllIframes').mockImplementation(() => { throw new Error('boom'); });
+        jest.spyOn(element, 'getAllIframes').mockImplementation(() => {
+            throw new Error('boom');
+        });
         await observer.setup();
         // Invoke callback with an empty mutation list to force the try block and invocation of element.getAllIframes
         expect(cbRef).toBeDefined();
@@ -127,7 +150,7 @@ describe('Coverage extra paths (error branches & autostart)', () => {
     test('autostart helper can be forced to run in Node environment and registers events', async () => {
         // Ensure a link exists in head so version.getAllFromHead doesn't throw during initialSetup.
         const backupHead = document.head.innerHTML;
-        document.head.innerHTML = `<link href="http://localhost/assets/built/portal.css?v=abc" rel="stylesheet">`;
+        document.head.innerHTML = '<link href="http://localhost/assets/built/portal.css?v=abc" rel="stylesheet">';
         const addEventSpy = jest.spyOn(window, 'addEventListener');
         try {
             // Force autostart to run in Node by using the exported helper
