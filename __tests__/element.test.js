@@ -6,7 +6,8 @@ describe('Element utilities', () => {
     beforeEach(() => {
         document.head.innerHTML = '';
         document.body.innerHTML = '';
-        injector.config.log.enabled = false;
+        injector.config.log.enabled = true;
+        injector.config.log.level = 'info';
     });
 
     test('element.create.link builds a link node with given url', () => {
@@ -17,17 +18,16 @@ describe('Element utilities', () => {
     });
 
     test('element.getAllInsideIframe returns NodeList inside iframe', () => {
-        const iframeDoc = document.implementation.createHTMLDocument('iframe');
         const iframe = document.createElement('iframe');
-        iframe.contentDocument = iframeDoc;
-        iframe.contentWindow = { document: iframeDoc };
+        document.body.appendChild(iframe);
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         const el1 = document.createElement('div');
         el1.className = 'x';
         const el2 = document.createElement('div');
         el2.className = 'x';
         iframeDoc.body.appendChild(el1);
         iframeDoc.body.appendChild(el2);
-        const found = injector.element.getAllInsideIframe({ iframe, selector: '.x' });
+        const found = injector.element.getAllInsideIframe({ iframe, selector: '.x', doc: iframeDoc });
         expect(found.length).toBe(2);
     });
 

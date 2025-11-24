@@ -4,8 +4,16 @@ describe('Observer and Watcher', () => {
     beforeEach(() => {
         document.head.innerHTML = '';
         document.body.innerHTML = '';
-        injector.config.log.enabled = false;
+        injector.config.log.enabled = true;
+        injector.config.log.level = 'info';
         injector.config.defaults.element.timeout = 50;
+        injector.config.watcher.cycleCount = 0;
+        // Ensure watcher is cleared between tests
+        try {
+            injector.watcher.clear();
+        } catch (err) {
+            // ignore
+        }
     });
 
     test('observer.setup registers a mutation observer and setupMonitor hooks', async () => {
@@ -33,7 +41,7 @@ describe('Observer and Watcher', () => {
         versioned.rel = 'stylesheet';
         versioned.href = '/assets/built/portal.css?v=abc';
         document.head.appendChild(versioned);
-        injector.onload.initialSetup();
+        await injector.onload.initialSetup();
 
         const spy = jest.spyOn(injector.inject, 'everything');
         await injector.observer.setup();
@@ -61,6 +69,18 @@ describe('Observer and Watcher', () => {
         injector.config.watcher.timer.limit = 100; // ms
         injector.config.watcher.interval = 10; // ms
         injector.config.watcher.cycleCount = 0;
+        // Add a versioned link so that on-demand builds in inject.* can succeed
+        const versioned = document.createElement('link');
+        versioned.rel = 'stylesheet';
+        versioned.href = '/assets/built/portal.css?v=hash123';
+        document.head.appendChild(versioned);
+        // Create the root and an iframe so the watcher will call inject.everything
+        const root = document.createElement('div');
+        root.id = 'ghost-portal-root';
+        document.body.appendChild(root);
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('title', 'portal');
+        root.appendChild(iframe);
         const spy = jest.spyOn(injector.inject, 'everything');
         injector.watcher.set();
         expect(injector.config.watcher.current).not.toBeNull();

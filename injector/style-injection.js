@@ -480,10 +480,13 @@ class element {
      * @returns {NodeList} NodeList of elements matching inside the iframe
      * @throws {Error} If iframe or its contentDocument is not available
      */
-    static getAllInsideIframe({ iframe, selector }) {
+    static getAllInsideIframe({ iframe, selector, doc } = {}) {
         try {
-            if (!iframe || !iframe.contentDocument) throw new Error('Iframe or iframe document is not available');
-            return iframe.contentDocument.querySelectorAll(selector);
+            // Accept an explicit doc param (for tests) or pull from iframe
+            const documentContext =
+                doc || (iframe && (iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document)));
+            if (!iframe || !documentContext) throw new Error('Iframe or iframe document is not available');
+            return documentContext.querySelectorAll(selector);
         } catch (error) {
             const message = 'Failed to get elements inside iframe.';
             const cause = { cause: error };
@@ -595,7 +598,12 @@ class element {
     static clone({ elementHandle = element.default.elementHandle }) {
         try {
             if (elementHandle === undefined) throw new Error('Element handle is empty/undefined');
-            if (!(elementHandle instanceof Element)) throw new Error('Provided an element handle that is not an instance of an Element object');
+            if (
+                !(elementHandle instanceof Element) &&
+                !(typeof Element !== 'undefined' && elementHandle.nodeType === Node.ELEMENT_NODE)
+            ) {
+                throw new Error('Provided an element handle that is not an instance of an Element object');
+            }
             const elementClone = elementHandle.cloneNode();
             return elementClone;
         } catch (error) {
@@ -686,20 +694,46 @@ class element {
             try {
                 const elementCollectionObject = element.getAll({ selector });
                 if (count < 1) throw new Error('Invalid object count target.');
-                if (elementCollectionObject instanceof NodeList && elementCollectionObject.length >= count) resolve(elementCollectionObject);
+                // If count already satisfies the mode condition, resolve immediately
+                if (elementCollectionObject instanceof NodeList) {
+                    if (
+                        (mode === 1 && elementCollectionObject.length >= count) ||
+                        (mode === 2 && elementCollectionObject.length <= count) ||
+                        (mode !== 1 && mode !== 2 && elementCollectionObject.length === count)
+                    ) {
+                        resolve(elementCollectionObject);
+                    }
+                }
+                let timeoutChecker = null;
                 const observer = new MutationObserver(function () {
                     const elementCollectionObject = element.getAll({ selector });
                     switch (mode) {
                         case 1: // More than or equal
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length >= count) resolve(elementCollectionObject);
+                            if (
+                                elementCollectionObject instanceof NodeList &&
+                                elementCollectionObject.length >= count
+                            ) {
+                                clearTimeout(timeoutChecker);
+                                resolve(elementCollectionObject);
+                            }
                             break;
                         case 2: // Less than or equal
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length < count)
+                            if (
+                                elementCollectionObject instanceof NodeList &&
+                                elementCollectionObject.length <= count
+                            ) {
+                                clearTimeout(timeoutChecker);
                                 resolve(elementCollectionObject);
+                            }
                             break;
                         default: // Equal, 0 or other values
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length === count)
+                            if (
+                                elementCollectionObject instanceof NodeList &&
+                                elementCollectionObject.length === count
+                            ) {
+                                clearTimeout(timeoutChecker);
                                 resolve(elementCollectionObject);
+                            }
                             break;
                     }
                 });
@@ -709,7 +743,7 @@ class element {
                 };
                 const target = document.body;
                 observer.observe(target, options);
-                const timeoutChecker = setTimeout(function () {
+                timeoutChecker = setTimeout(function () {
                     observer.disconnect();
                     const message = 'Timed out waiting for all the elements';
                     _log({ message: `${message}`, level: 'warning' });
@@ -859,11 +893,15 @@ class inject {
         try {
             if (!config.inject.enabled) return;
             if (!config.inject.style) return;
-            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameLinkInjection) throw new Error('Iframe is undefined');
+            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameLinkInjection) {
+                throw new Error('Iframe is undefined');
+            }
             const iframeName = element.getIframeName({ iframe });
             if (iframe.contentDocument && !inject.check.isLinkInjected({ iframe })) {
                 if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
                 _log({ message: `Injecting stylesheet using link element in iframe ${iframeName}`, level: 'info' });
+                // Ensure a built link element exists; build on demand in tests
+                if (!builtLinkElement) builtLinkElement = element.build.link();
                 const link = element.clone({ elementHandle: builtLinkElement });
                 iframe.contentDocument.head.appendChild(link);
                 if (!inject.check.isLinkInjected({ iframe })) {
@@ -901,12 +939,18 @@ class inject {
         try {
             if (!config.inject.enabled) return;
             if (!config.inject.fonts) return;
-            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameFontInjection) throw new Error('Iframe is undefined');
+            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameFontInjection) {
+                throw new Error('Iframe is undefined');
+            }
             const iframeName = element.getIframeName({ iframe });
             const fontCount = config.inject.fontCountAuto ? element.countFonts() : config.inject.fontCount;
             if (iframe.contentDocument && !inject.check.areFontsInjected({ iframe, fontCount: fontCount })) {
                 if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
                 _log({ message: `Injecting font element collection in iframe ${iframeName}`, level: 'info' });
+                // Ensure we have built font collection and build it on demand if not set
+                if (!builtFontElementCollection || builtFontElementCollection.length === 0) {
+                    builtFontElementCollection = element.build.fontCollection();
+                }
                 const fontCollection = element.cloneAll({ elementHandleCollection: builtFontElementCollection });
                 fontCollection.forEach(function (fontElement) {
                     iframe.contentDocument.head.appendChild(fontElement);
@@ -1186,8 +1230,22 @@ class onload {
      */
     static async initialSetup() {
         _log({ message: 'Doing injector initial setup', level: 'info' });
-        builtLinkElement = element.build.link();
-        builtFontElementCollection = element.build.fontCollection();
+        try {
+            _log({ message: 'DEBUG initialSetup: about to build link and fonts', level: 'info' });
+            builtLinkElement = element.build.link();
+            _log({
+                message: `DEBUG initialSetup: builtLinkElement set to ${builtLinkElement ? builtLinkElement.href || builtLinkElement.toString() : builtLinkElement}`,
+                level: 'info',
+            });
+            builtFontElementCollection = element.build.fontCollection();
+            _log({
+                message: `DEBUG initialSetup: builtFontElementCollection set length ${(builtFontElementCollection || []).length}`,
+                level: 'info',
+            });
+        } catch (err) {
+            _log({ message: `DEBUG initialSetup failed: ${err && err.message ? err.message : err}`, level: 'error' });
+            throw err;
+        }
     }
 
     /**
@@ -1222,8 +1280,12 @@ class onload {
 }
 
 /* Self executing anonymous function that injects portal styles on window load event, makes the magic happen */
-/* Only auto-run when in a browser environment (window/document available) */
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+/* Only auto-run when in a real browser environment (window/document available and not running as a CommonJS module) */
+if (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    !(typeof module !== 'undefined' && module.exports)
+) {
     onload.initialSetup();
     onload.setupEvent();
 }
@@ -1238,8 +1300,12 @@ if (typeof module !== 'undefined' && module.exports) {
         version,
         log,
         config,
-        builtLinkElement,
-        builtFontElementCollection,
+        get builtLinkElement() {
+            return builtLinkElement;
+        },
+        get builtFontElementCollection() {
+            return builtFontElementCollection;
+        },
         watcher,
     };
 }

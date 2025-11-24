@@ -1,3 +1,5 @@
+const injector = require('../injector/style-injection.js');
+
 test('observer.setup registers a mutation observer and setupMonitor hooks', async () => {
     const root = document.createElement('div');
     root.id = 'ghost-portal-root';
@@ -29,7 +31,7 @@ test('observer triggers inject.everything when iframe is added', async () => {
     versioned.rel = 'stylesheet';
     versioned.href = '/assets/built/portal.css?v=abc';
     document.head.appendChild(versioned);
-    injector.onload.initialSetup();
+    await injector.onload.initialSetup();
 
     // spy on inject.everything
     const spy = jest.spyOn(injector.inject, 'everything');
@@ -42,8 +44,8 @@ test('observer triggers inject.everything when iframe is added', async () => {
     ifr.setAttribute('title', 'portal');
     root.appendChild(ifr);
 
-    // Wait a tick for MutationObserver to run
-    await new Promise((r) => setTimeout(r, 0));
+    // Wait a bit for MutationObserver to run
+    await new Promise((r) => setTimeout(r, 50));
 
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
@@ -51,17 +53,17 @@ test('observer triggers inject.everything when iframe is added', async () => {
 
 test('element.getAllInsideIframe returns NodeList inside iframe', () => {
     // prepare iframe with elements inside
-    const iframeDoc = document.implementation.createHTMLDocument('iframe');
     const iframe = document.createElement('iframe');
-    iframe.contentDocument = iframeDoc;
-    iframe.contentWindow = { document: iframeDoc };
+    document.body.appendChild(iframe);
+    // No need to keep local doc reference here in this test
     const el1 = document.createElement('div');
     el1.className = 'x';
     const el2 = document.createElement('div');
     el2.className = 'x';
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     iframeDoc.body.appendChild(el1);
     iframeDoc.body.appendChild(el2);
-    const found = injector.element.getAllInsideIframe({ iframe, selector: '.x' });
+    const found = injector.element.getAllInsideIframe({ iframe, selector: '.x', doc: iframeDoc });
     expect(found.length).toBe(2);
 });
 
@@ -89,25 +91,27 @@ test('inject.linkElement throws when iframe undefined and config.errors.throwOnU
     injector.config.inject.enabled = true;
     injector.config.inject.style = true;
     injector.config.errors.throwOnUndefinedIFrameLinkInjection = true;
+    injector.config.errors.throwOnRegularInjectionFailure = true;
+    // debug logs removed
     expect(() => injector.inject.linkElement({ iframe: undefined })).toThrow();
     // revert to default
     injector.config.errors.throwOnUndefinedIFrameLinkInjection = true;
+    injector.config.errors.throwOnRegularInjectionFailure = false;
 });
 
-test('inject.linkElement uses fallback contentWindow appendChild when isLinkInjected fails after append', () => {
+test('inject.linkElement uses fallback contentWindow appendChild when isLinkInjected fails after append', async () => {
     // prepare head with versioned link so element.build.link() can pick version
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = '/assets/built/portal.css?v=hash123';
     document.head.appendChild(link);
     // initialize builtLinkElement
-    injector.onload.initialSetup();
+    await injector.onload.initialSetup();
 
     // Setup iframe where contentDocument.head.appendChild throws
-    const iframeDoc = document.implementation.createHTMLDocument('iframe');
     const iframe = document.createElement('iframe');
-    iframe.contentDocument = iframeDoc;
-    iframe.contentWindow = { document: iframeDoc };
+    document.body.appendChild(iframe);
+    // intentionally not keeping `iframeDoc` for this test; we use contentWindow.document directly
     // Spy on contentWindow appendChild
     const appendSpy = jest.spyOn(iframe.contentWindow.document.head, 'appendChild');
     // Force the check to always return false so fallback path is triggered
@@ -132,18 +136,17 @@ test('observer.setup throws error when portal root is not present', async () => 
     await expect(injector.observer.setup()).rejects.toThrow();
 });
 
-test('inject.check functions identify presence correctly', () => {
+test('inject.check functions identify presence correctly', async () => {
     // setup built elements
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = '/assets/built/portal.css?v=hash123';
     document.head.appendChild(link);
-    injector.onload.initialSetup();
+    await injector.onload.initialSetup();
 
-    const iframeDoc = document.implementation.createHTMLDocument('iframe');
     const iframe = document.createElement('iframe');
-    iframe.contentDocument = iframeDoc;
-    iframe.contentWindow = { document: iframeDoc };
+    document.body.appendChild(iframe);
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     // add link element identical to built link to iframe head
     const clonedLink = injector.element.clone({ elementHandle: injector.builtLinkElement });
     iframeDoc.head.appendChild(clonedLink);
@@ -155,7 +158,7 @@ test('inject.check functions identify presence correctly', () => {
     font.rel = 'preload';
     font.href = '/assets/fonts/test.woff2';
     document.head.appendChild(font);
-    injector.onload.initialSetup();
+    await injector.onload.initialSetup();
     const clonedFonts = injector.element.cloneAll({ elementHandleCollection: injector.builtFontElementCollection });
     clonedFonts.forEach(function (f) {
         iframeDoc.head.appendChild(f);

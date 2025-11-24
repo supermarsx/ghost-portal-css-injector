@@ -4,7 +4,8 @@ describe('Version and Log utilities', () => {
     beforeEach(() => {
         document.head.innerHTML = '';
         document.body.innerHTML = '';
-        injector.config.log.enabled = false;
+        injector.config.log.enabled = true;
+        injector.config.log.level = 'info';
     });
 
     test('version.getFromUrl should extract version param', () => {
