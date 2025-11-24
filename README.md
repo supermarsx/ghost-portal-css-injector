@@ -104,7 +104,7 @@ Notes:
 
 ## CI & Releases
 
-This repository contains a GitHub Actions pipeline (see `.github/workflows/ci.yml`) that runs on pushes to `main`, pull requests, and manual dispatch. The pipeline includes separate jobs for:
+This repository contains several GitHub Actions workflows (see `.github/workflows/`) that run on pushes to `main`, pull requests, and manual dispatch. The workflows include separate jobs for:
 
 - `lint` — runs ESLint
 - `format` — runs Prettier checks
@@ -118,6 +118,14 @@ Automatic release behavior
 
 - The automatic release job runs only on pushes to `main` and will only create a release if there are code changes in relevant files (`injector/**`, `package.json`, `assets/**`, `*.js`, `*.hbs`). This prevents releases on documentation-only changes or other unrelated edits.
 - If you'd like to force a release regardless of changed paths, use the 'Manual Release' workflow dispatch trigger which will create a release for the current commit and upload the packaged artifact.
+
+    Publishing to npm (optional)
+
+    - The release workflow can optionally publish the package to npm if you add an `NPM_TOKEN` repository secret. To enable this behavior:
+        1. Create a token with `publish` permission from your npm account and add it to the GitHub repository Secrets as `NPM_TOKEN` (Settings → Secrets and variables → Actions → New repository secret).
+        2. Ensure `package.json` does not have `private: true` — the workflow will skip publishing if the `private` key is set to `true`.
+        3. Publishing is gated by both the token presence and a change to code-related files; if you want to publish regardless of files changed, use the 'Manual Release' trigger.
+
 
 If you'd like to manually create a release locally, you can run:
 
