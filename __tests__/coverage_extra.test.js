@@ -177,9 +177,9 @@ describe('Coverage extra tests for uncovered branches', () => {
         global.MutationObserver = ObserverThrows;
 
         // Act & Assert
-        await expect(
-            element.waitAll({ selector: testSelector, count: 2, timeout: 500, mode: 1 }),
-        ).rejects.toThrow('Failed to wait for all elements.');
+        await expect(element.waitAll({ selector: testSelector, count: 2, timeout: 500, mode: 1 })).rejects.toThrow(
+            'Failed to wait for all elements.'
+        );
     });
 
     test('observer.setup calls inject.everything when new iframe added and mutation type is configured', async () => {

@@ -72,7 +72,7 @@ describe('Coverage extra paths (error branches & autostart)', () => {
         config.defaults.element.timeout = 100;
         const logSpy = jest.spyOn(console, 'log');
         await expect(
-            element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 }),
+            element.waitAll({ selector: '.will-not-appear', count: 1, timeout: 200, mode: 1 })
         ).rejects.toBeDefined();
         // Ensure getAll was called multiple times (initial + inside callback)
         expect(called).toBeGreaterThanOrEqual(2);
