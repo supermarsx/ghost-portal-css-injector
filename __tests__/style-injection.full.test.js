@@ -240,7 +240,7 @@ describe('Comprehensive tests for injector script', () => {
         injector.config.errors.throwOnUndefinedIFrameLinkInjection = true;
     });
 
-    test('inject.linkElement uses fallback contentWindow appendChild when head appendChild fails', () => {
+    test('inject.linkElement uses fallback contentWindow appendChild when isLinkInjected fails after append', () => {
         // prepare head with versioned link so element.build.link() can pick version
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -254,15 +254,16 @@ describe('Comprehensive tests for injector script', () => {
         const iframe = document.createElement('iframe');
         iframe.contentDocument = iframeDoc;
         iframe.contentWindow = { document: iframeDoc };
-        // Make the head appendChild throw on first call
-        let thrown = false;
-        iframeDoc.head.appendChild = function (el) { if (!thrown) { thrown = true; throw new Error('boom'); } else { return el; } };
-        // spy on contentWindow appendChild
+        // Spy on contentWindow appendChild
         const appendSpy = jest.spyOn(iframe.contentWindow.document.head, 'appendChild');
-
+        // Force the check to always return false so fallback path is triggered
+        const originalCheck = injector.inject.check.isLinkInjected;
+        injector.inject.check.isLinkInjected = function () { return false; };
         injector.inject.linkElement({ iframe });
 
         expect(appendSpy).toHaveBeenCalled();
+        // restore
+        injector.inject.check.isLinkInjected = originalCheck;
         appendSpy.mockRestore();
     });
 
@@ -343,6 +344,7 @@ describe('Comprehensive tests for injector script', () => {
         // advance timers to go past the limit and a few cycles
         jest.advanceTimersByTime(200);
         expect(injector.config.watcher.cycleCount).toBeGreaterThanOrEqual(1);
+        expect(spy).toHaveBeenCalled();
         // call clear and test
         injector.watcher.clear();
         expect(injector.config.watcher.current).toBeNull();
