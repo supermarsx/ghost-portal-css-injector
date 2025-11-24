@@ -11,6 +11,8 @@ Portal stylesheet injector for Ghost CMS
 [![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/supermarsx/ghost-portal-css-injector?style=flat-square&label=Issues)](#)
 
 
+[![coverage](https://raw.githubusercontent.com/supermarsx/ghost-portal-css-injector/main/badges/coverage.svg)](https://github.com/supermarsx/ghost-portal-css-injector)
+
 [**[Download this repository]**](https://codeload.github.com/supermarsx/ghost-portal-css-injector/zip/refs/heads/main)
 
 
@@ -139,6 +141,32 @@ npm test
 ```
 
 The repo includes a test suite that checks the injector script and validates behavior in a DOM-like environment (jsdom). The CI reports coverage for the test run.
+
+## Dev
+
+If you are developing or debugging this project, use the following steps locally:
+
+- Install dependencies:
+
+```bash
+npm install
+```
+
+- Run lint/format checks:
+
+```bash
+npm run lint
+npm run format
+```
+
+- Run tests and generate coverage (and the coverage badge locally):
+
+```bash
+npm test
+npm run coverage:badge
+```
+
+The badge will be generated at `badges/coverage.svg`. The CI will also generate and commit an updated badge on successful runs when coverage changes.
 
 ## Notes
 

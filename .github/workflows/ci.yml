@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [ main ]
+      # Ignore badge updates to prevent infinite badge-commit loops
+      paths-ignore:
+        - 'badges/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch: {}
@@ -61,6 +64,12 @@ jobs:
         with:
           name: coverage-report
           path: coverage
+        - name: Generate coverage badge (artifact and file)
+          run: |
+            npm run coverage:badge
+            mkdir -p badges
+            # list badge to debug
+            ls -la badges || true
 
   package:
     name: Package
@@ -81,6 +90,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-package
+        - name: Download coverage badge
+          uses: actions/download-artifact@v4
+          with:
+            name: coverage-report
           path: ./*.tgz
 
   release:
@@ -117,6 +130,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a ${TAG_NAME} -m "Release ${TAG_NAME}" || echo "tag exists"
           git push origin --tags || echo "tags push failed"
+      - name: Commit coverage badge
+        run: |
+          if [ -f badges/coverage.svg ]; then
+            git add badges/coverage.svg || true
+            if git diff --staged --quiet; then
+              echo "No badge changes to commit"
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no commit"
+              git push origin main || echo "push failed"
+            fi
+          fi
       - name: Download package artifact
         if: steps.changes.outputs.code == 'true'
         uses: actions/download-artifact@v4

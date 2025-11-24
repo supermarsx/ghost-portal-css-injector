@@ -9,6 +9,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "jest --coverage --runInBand",
+    "coverage:badge": "node scripts/generate-coverage-badge.js",
     "package": "npm pack"
   },
   "devDependencies": {
