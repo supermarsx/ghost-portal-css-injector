@@ -51,6 +51,53 @@ To start using the injector you need to download or clone this repository and pl
 
 After placing those files in their respective locations you should open each one and read them to adapt the injection to your specific needs.
 
+## Install / Using in a Ghost theme
+
+Follow these steps to add the injector to a Ghost theme. This will inject `portal.css` and (optionally) fonts into the portal iframe so the Portal UI can be styled without cloning or rebuilding the portal repo.
+
+1. Copy the files into your theme's assets folder:
+
+	- `injector/style-injection.js` -> `assets/js/style-injection.js`
+	- `injector/portal.css` -> `assets/built/portal.css`
+
+2. Include the portal stylesheet in your theme head with a version query string. The injector extracts the version string from `?v=` in the URL and uses it to build the injection link for portal iframes. Add the link to `partials/head.hbs` or your theme `default.hbs` head block:
+
+	```html
+	<link rel="stylesheet" href="{{asset "built/portal.css"}}?v=1" />
+	```
+
+	Tip: Update the `?v=` value (increment the number or set a unique value) when you make changes to `portal.css` so the injector detects the new version.
+
+3. Add and include the injector script in your theme (best placed before the closing `</body>` tag). For example, drop it in `partials/footer.hbs` or `default.hbs`:
+
+	```html
+	<script src="{{asset "js/style-injection.js"}}"></script>
+	```
+
+	The script runs at `window.onload` and automatically scans the page for the portal root element, finds the versioned stylesheet in the `head`, and injects the CSS into all portal iframes.
+
+4. If you want to inject font assets into the portal iframe head, add a `injection-type="font"` attribute to your font elements in the theme `head`. For example:
+
+	```html
+	<link rel="preload" href="{{asset "fonts/MyFont.woff2"}}" as="font" type="font/woff2" crossorigin injection-type="font">
+	```
+
+	The injector will clone marked font elements and insert them in the portal iframes.
+
+5. Optional: Customize `style-injection.js`'s `config` object to change selectors, enable/disable features, or adjust watcher/observer behavior. The script contains comments explaining each option.
+
+6. Test the theme:
+
+	- Build and upload your theme to Ghost.
+	- Visit the site and open the portal (sign in / membership modal).
+	- Check the portal UI; your `portal.css` changes should be applied.
+	- For debugging/verification, open the browser console and check for log messages from the injector (the script has a log mode that can be toggled via `config.log.enabled`).
+
+Notes:
+- The injector looks for the first versioned resource in the HTML head using a `?v=` query — ensure the `portal.css` link is present in the head to guarantee version extraction and consistent injection.
+- If you change versions frequently, bump the `?v=` value to force the injector to use the new file.
+- If your theme uses a CSS/JS build pipeline, add the files to your build output folders accordingly (e.g., `assets/built/` and `assets/js/`).
+
 ## Notes
 
 If you're going to use fonts injection the only good workaround to inject them is to add the attribute to every element related to the font(s) in the `.hbs` files, which by default the attribute goes with the selector `[injection-type="font"]`.
