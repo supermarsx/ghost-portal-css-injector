@@ -6,6 +6,7 @@
   "main": "injector/style-injection.js",
   "scripts": {
     "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "jest --coverage --runInBand",

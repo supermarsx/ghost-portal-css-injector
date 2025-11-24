@@ -13,10 +13,14 @@
     "sourceType": "module"
   },
   "rules": {
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
     "no-undef": "off",
     "no-console": "off",
-    "prefer-const": "off",
+    "eqeqeq": "error",
+    "prefer-const": "error",
+    "consistent-return": "error",
+    "curly": ["error", "multi-line"],
+    "no-var": "error",
     "indent": ["error", 4],
     "quotes": ["error", "single"],
     "semi": ["error", "always"]

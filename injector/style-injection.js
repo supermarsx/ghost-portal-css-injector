@@ -179,8 +179,8 @@ const config = {
 /**
  * Other globals
  */
-var builtLinkElement = null;
-var builtFontElementCollection = null;
+let builtLinkElement = null;
+let builtFontElementCollection = null;
 
 // #endregion
 
@@ -209,15 +209,15 @@ class log {
      */
     constructor({ message = log.default.message, level = log.default.level }) {
         if (!config.log.enabled) return;
-        var logLevel = log.getLogLevel({ level });
+        const logLevel = log.getLogLevel({ level });
 
         // Check if the current log level allows this message
         if (logLevel >= LOG_LEVELS[config.log.level]) {
             let logMessage = log.getLogMessageString({ message, level });
             const colors = config.defaults.log.colors;
-            var levelColor = undefined;
-            var sanitizedLevel = log.sanitizeLogLevelString({ level });
-            sanitizedLevel = sanitizedLevel == undefined ? 'info' : sanitizedLevel;
+            let levelColor = undefined;
+            const sanitizedLevel = log.sanitizeLogLevelString({ level });
+            sanitizedLevel = sanitizedLevel === undefined ? 'info' : sanitizedLevel;
             levelColor = colors.level[sanitizedLevel];
             console.log(logMessage, colors.timestamp, levelColor, colors.level.message);
         }
@@ -438,7 +438,7 @@ class element {
      */
     static get({ selector = element.default.selector, wait = element.default.wait }) {
         try {
-            let elementHandle;
+            const elementHandle = document.querySelector(selector);
             if (selector.length === 0) {
                 const message = `Selector parameter is empty.`;
                 throw new Error(message);
@@ -463,7 +463,7 @@ class element {
      */
     static getAll({ selector = element.default.selectorAll, wait = element.default.waitAll, count = element.default.selectorAllCount }) {
         try {
-            let elementCollectionHandle;
+            const elementCollectionHandle = document.querySelectorAll(selector);
             if (selector.length === 0) {
                 const message = 'Selector parameter is empty.';
                 throw new Error(message);
@@ -542,7 +542,7 @@ class element {
      * @returns {string} The iframe title attribute value or empty string if missing
      */
     static getIframeName({ iframe }) {
-        if (iframe == undefined) return '';
+        if (iframe === undefined || iframe === null) return '';
         const title = iframe.getAttribute('title');
         return title ? title.toString() : '';
     }
@@ -555,7 +555,7 @@ class element {
      */
     static count({ selector = element.default.selector }) {
         try {
-            let elementCollectionHandle;
+            const elementCollectionHandle = element.getAll({ selector });
             elementCollectionHandle = element.getAll({ selector });
             return elementCollectionHandle.length;
         } catch (error) {
@@ -568,7 +568,7 @@ class element {
     /* Get portal iframe count */
     static countIframes() { 
         try {
-            let elementCollectionHandle;
+            const elementCollectionHandle = element.getAll({ selector });
             const iframeSelector = config.selector.iframes;
             // element.count returns a number; return it directly
             const iframeCount = element.count({ selector: iframeSelector });
@@ -583,7 +583,7 @@ class element {
     /* Get font elements count */
     static countFonts() {
         try {
-            let elementCollectionHandle;
+            const elementCollectionHandle = element.getAll({ selector });
             const fontsSelector = config.selector.fonts;
             // element.count returns a number; return it directly
             const fontCount = element.count({ selector: fontsSelector });
@@ -606,7 +606,7 @@ class element {
         try {
             if (elementHandle === undefined) throw new Error('Element handle is empty/undefined');
             if (!(elementHandle instanceof Element)) throw new Error('Provided an element handle that is not an instance of an Element object');
-            let elementClone = elementHandle.cloneNode();
+            const elementClone = elementHandle.cloneNode();
             return elementClone;
         } catch (error) {
             const message = 'Failed to clone element using an element handle.';
@@ -624,10 +624,10 @@ class element {
     static cloneAll({ elementHandleCollection = element.default.handleCollection }) {
         try {
             if (elementHandleCollection === undefined) throw new Error('Element handle collection is empty/undefined');
-            var elementCloneCollection = new Array();
+            const elementCloneCollection = [];
             elementHandleCollection.forEach(function (elementHandle) {
                 if (elementHandle instanceof Element) {
-                    var clonedElement = elementHandle.cloneNode();
+                    const clonedElement = elementHandle.cloneNode();
                     elementCloneCollection.push(clonedElement);
                 }
             });
@@ -701,7 +701,7 @@ class element {
                             if (elementCollectionObject instanceof NodeList && elementCollectionObject.length < count) resolve(elementCollectionObject);
                             break;
                         default: // Equal, 0 or other values
-                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length == count) resolve(elementCollectionObject);
+                            if (elementCollectionObject instanceof NodeList && elementCollectionObject.length === count) resolve(elementCollectionObject);
                             break;
                     }
                 });
@@ -788,8 +788,8 @@ class element {
          */
         static fontCollection() {
             _log({ message: 'Building font collection', level: 'info' });
-            var fontElementHandleCollection = element.getAllFonts();
-            var fontElementCloneCollection = element.cloneAll({
+            const fontElementHandleCollection = element.getAllFonts();
+            const fontElementCloneCollection = element.cloneAll({
                 elementHandleCollection: fontElementHandleCollection
             });
             return fontElementCloneCollection;
@@ -817,7 +817,7 @@ class watcher {
      */
     static set() {
         if (!config.watcher.enabled) return;
-        if (config.watcher.current != null) return;
+        if (config.watcher.current !== null && config.watcher.current !== undefined) return;
         config.watcher.timer.start = Date.now();
         config.watcher.timer.end = Date.now() + config.watcher.timer.limit;
         config.watcher.current = setInterval(function () {
@@ -863,10 +863,10 @@ class inject {
         try {
             if (!config.inject.enabled) return;
             if (!config.inject.style) return;
-            if (iframe == undefined && config.errors.throwOnUndefinedIFrameLinkInjection) throw new Error('Iframe is undefined');
+            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameLinkInjection) throw new Error('Iframe is undefined');
             const iframeName = element.getIframeName({ iframe });
             if (iframe.contentDocument && !inject.check.isLinkInjected({ iframe })) {
-                if (iframe.contentDocument.head == null) return;
+                if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
                 _log({ message: `Injecting stylesheet using link element in iframe ${iframeName}`, level: 'info' });
                 const link = element.clone({ elementHandle: builtLinkElement });
                 iframe.contentDocument.head.appendChild(link);
@@ -902,11 +902,11 @@ class inject {
         try {
             if (!config.inject.enabled) return;
             if (!config.inject.fonts) return;
-            if (iframe == undefined && config.errors.throwOnUndefinedIFrameFontInjection) throw new Error('Iframe is undefined');
+            if ((iframe === undefined || iframe === null) && config.errors.throwOnUndefinedIFrameFontInjection) throw new Error('Iframe is undefined');
             const iframeName = element.getIframeName({ iframe });
             const fontCount = config.inject.fontCountAuto ? element.countFonts() : config.inject.fontCount;
             if (iframe.contentDocument && !inject.check.areFontsInjected({ iframe, fontCount: fontCount })) {
-                if (iframe.contentDocument.head == null) return;
+                if (iframe.contentDocument.head === null || iframe.contentDocument.head === undefined) return;
                 _log({ message: `Injecting font element collection in iframe ${iframeName}`, level: 'info' });
                 const fontCollection = element.cloneAll({ elementHandleCollection: builtFontElementCollection });
                 fontCollection.forEach(function (fontElement) {
@@ -1072,7 +1072,7 @@ class inject {
                 _log({ message: `Checking if font element collection is already injected in iframe ${iframeName}`, level: 'info' });
                 const fontCollectionSelector = config.selector.fonts;
                 const fontCollection = iframe.contentDocument.querySelectorAll(fontCollectionSelector);
-                const areFontsPresent = (fontCollection.length == fontCount);
+                const areFontsPresent = (fontCollection.length === fontCount);
                 _log({ message: `Font element collection is${areFontsPresent ? '' : ' NOT'} present in iframe ${iframeName}`, level: 'info' });
                 return areFontsPresent;
             } catch (error) {
@@ -1106,10 +1106,11 @@ class observer {
             if (!config.observer.enabled) return;
             _log({ message: 'Setting up mutation observer', level: 'info' });
             const selectorRootElement = config.selector.root;
-            let rootElement = await element.wait({ selector: selectorRootElement });
+            const rootElement = await element.wait({ selector: selectorRootElement });
 
             if (!rootElement) {
-                _log({ message: `Failed to get root element ${selectorRootElement}`, level: 'error' });
+                const message = `Failed to get root element ${selectorRootElement}`;
+                _log({ message, level: 'error' });
                 throw new Error(message);
             }
 

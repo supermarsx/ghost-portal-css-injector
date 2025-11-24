@@ -68,19 +68,22 @@ Follow these steps to add the injector to a Ghost theme. This will inject `porta
 	<link rel="stylesheet" href="{{asset "built/portal.css"}}?v=1" />
 	```
 
-	Tip: Update the `?v=` value (increment the number or set a unique value) when you make changes to `portal.css` so the injector detects the new version.
 
 3. Add and include the injector script in your theme (best placed before the closing `</body>` tag). For example, drop it in `partials/footer.hbs` or `default.hbs`:
 
 	```html
 	<script src="{{asset "js/style-injection.js"}}"></script>
-	```
 
 	The script runs at `window.onload` and automatically scans the page for the portal root element, finds the versioned stylesheet in the `head`, and injects the CSS into all portal iframes.
 
 4. If you want to inject font assets into the portal iframe head, add a `injection-type="font"` attribute to your font elements in the theme `head`. For example:
 
-	```html
+	Quick autofix (try these to apply changes):
+
+	```bash
+	npm run lint:fix
+	npm run format:fix
+	```
 	<link rel="preload" href="{{asset "fonts/MyFont.woff2"}}" as="font" type="font/woff2" crossorigin injection-type="font">
 	```
 
