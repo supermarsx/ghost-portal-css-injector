@@ -34,12 +34,51 @@ You can use this script to inject both styles and fonts to Ghost CMS portal, it'
 
 ## Functionality
 
-- Inject `<link>` element in every portal iframe
-- Built-in injection persistence and monitoring (observer & watcher)
-- Inject all fonts and related HTML elements from the main `<head>` tag
-- Logging functionality for debugging and testing purposes
-- Extensive configuration object for maximum flexibility
-- Automatic file version discovery for smooth injection
+### Iframe Portal CSS Injection
+
+The core functionality of this injector is to apply custom styles to the Ghost Portal, which runs inside an `iframe`. Since styles from the parent page do not cascade into iframes, this script:
+
+1.  **Builds a Stylesheet Link**: It constructs a `<link rel="stylesheet">` element pointing to your theme's `assets/built/portal.css`. It automatically appends a version parameter (`?v=...`) extracted from other stylesheets in your site to ensure cache busting matches your theme version.
+2.  **Observes the DOM**: It uses a `MutationObserver` to watch for the creation of the `#ghost-portal-root` element and its children.
+3.  **Injects into Head**: When a portal iframe is detected (e.g., when a user clicks "Subscribe"), the script accesses the iframe's `contentDocument` and appends the constructed `<link>` element to its `<head>`.
+4.  **Persists**: A "watcher" mechanism runs for a short period after injection to ensure the styles remain applied even if the iframe reloads or changes its content dynamically.
+
+### Hiding "Powered by Ghost" Banner
+
+The included `portal.css` file comes with pre-written rules to hide the "Powered by Ghost" branding often found in the portal popup.
+
+```css
+/* injector/portal.css */
+.gh-portal-powered {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+}
+```
+
+This CSS rule is injected along with your other custom styles, effectively removing the banner from view within the portal.
+
+### Portal Dark Mode
+
+The default `portal.css` included in this repository is pre-configured to transform the standard Ghost Portal into a dark mode theme. It uses CSS variables to define colors, making it easy to customize the palette to match your specific dark theme.
+
+```css
+/* injector/portal.css */
+:root {
+    --color-base: #fdfdfd;
+    --color-background: #151515;
+    --color-faded-1: #c9c9c9;
+    /* ... */
+}
+```
+
+By modifying these variables in `portal.css`, you can adjust the background, text, and accent colors of the portal without needing to override every single class manually.
+
+### Additional Features
+
+- **Font Injection**: Can clone and inject font definitions (`<link rel="preload" ...>`) from your main site into the portal, ensuring typography consistency.
+- **Logging**: Includes a configurable logging system to help debug injection issues.
+- **Configuration**: Extensive `config` object in `style-injection.js` allows you to tweak selectors, timeouts, and behavior without rewriting logic.
 
 ## Quick start
 
