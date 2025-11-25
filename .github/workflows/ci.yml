@@ -179,7 +179,7 @@ jobs:
               with:
                   name: coverage-report
                   path: coverage
-              if-no-files-found: warn
+              continue-on-error: true
             - name: Use Node.js for badge generation
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/setup-node@v4
@@ -217,7 +217,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: npm-package
-              if-no-files-found: warn
+              continue-on-error: true
             - name: Create GitHub release
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/create-release@v1
