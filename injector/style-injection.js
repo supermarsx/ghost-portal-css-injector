@@ -276,10 +276,12 @@ class log {
      * Normalize a log level string into a lowercase word.
      * @param {Object} options - Options object
      * @param {string} options.level - Log level string
-     * @returns {string} Lowercase sanitized level string
+     * @returns {string} Lowercase sanitized level string. If `level` is undefined/null it defaults to 'info'
      */
     static sanitizeLogLevelString({ level }) {
-        return level.toString().trim().toLowerCase();
+        // Be defensive against undefined/null and non-string values.
+        if (level === undefined || level === null) return 'info';
+        return String(level).trim().toLowerCase();
     }
 
     /**
@@ -291,7 +293,8 @@ class log {
      */
     static transformLogLevelString({ level }) {
         const charCount = config.log.characters;
-        return level.toString().trim().toUpperCase().substring(0, charCount);
+        const sanitized = log.sanitizeLogLevelString({ level });
+        return sanitized.toUpperCase().substring(0, charCount);
     }
 }
 

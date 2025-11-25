@@ -7,6 +7,14 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Read coverage summary produced by Jest/Coverage tools from the
+ * coverage directory. It prefers `coverage-summary.json` but falls back to
+ * `coverage-final.json` parsing when necessary.
+ *
+ * @returns {{total: {statements: {pct: number}}}} An object with `total.statements.pct` coverage percentage
+ * @throws {Error} When neither summary files exist or the files contain invalid JSON
+ */
 function readCoverageSummary() {
     const summaryFile = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
     if (fs.existsSync(summaryFile)) {
@@ -46,18 +54,41 @@ function readCoverageSummary() {
     throw new Error(`Coverage summary not found at ${summaryFile}`);
 }
 
+/**
+ * Extract the numeric statements coverage percent from a coverage summary
+ * object. The function tolerates missing properties and returns 0 in such cases.
+ *
+ * @param {{total?: {statements?: {pct?: number}}}} summary - Parsed coverage summary
+ * @returns {number} Coverage percentage (rounded integer)
+ */
 function getCoveragePercent(summary) {
     const total = summary.total;
     const statements = total.statements && total.statements.pct ? total.statements.pct : 0;
     return Math.round(Number(statements));
 }
 
+/**
+ * Choose a hex color for the badge according to thresholds.
+ *
+ * @param {number} pct - Coverage percent number
+ * @returns {string} Hex color string for the badge background
+ */
 function getBadgeColor(pct) {
     if (pct >= 90) return '#4c1'; // green
     if (pct >= 75) return '#dfb317'; // yellow
     return '#e05d44'; // red
 }
 
+/**
+ * Build a basic coverage badge SVG string with a left label and
+ * a right-hand coverage percentage value.
+ *
+ * This is intentionally lightweight and does not try to be
+ * a drop-in copy of Shields.io badges.
+ *
+ * @param {number} percent - Integer coverage percentage (0-100)
+ * @returns {string} SVG string representing the badge
+ */
 function generateSvg(percent) {
     const color = getBadgeColor(percent);
     const left = 'coverage';
@@ -82,6 +113,13 @@ function generateSvg(percent) {
     );
 }
 
+/**
+ * Ensure the `badges` output directory exists and write the raw SVG
+ * into `badges/coverage.svg`.
+ *
+ * @param {string} svg - SVG content to write into the badge file
+ * @returns {void}
+ */
 function writeBadge(svg) {
     const outDir = path.join(process.cwd(), 'badges');
     if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
@@ -90,6 +128,11 @@ function writeBadge(svg) {
     console.log('Badge written to', outFile);
 }
 
+/**
+ * CLI entrypoint: read coverage, generate an SVG badge, and write it
+ * to the repository `badges` directory. The process exits with a
+ * non-zero error code on failure to integrate with CI.
+ */
 function main() {
     try {
         const summary = readCoverageSummary();

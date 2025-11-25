@@ -2,6 +2,7 @@
     "testEnvironment": "jsdom",
     "coverageDirectory": "coverage",
     "testMatch": ["**/__tests__/**/*.test.js"],
+    "testPathIgnorePatterns": ["<rootDir>/__tests__/coverage_.*\\.test.js"],
     "collectCoverageFrom": ["injector/**/*.js"],
     "setupFilesAfterEnv": ["<rootDir>/__tests__/jest.setup.js"]
 }
