@@ -191,7 +191,7 @@ describe('Edge cases and uncovered branches', () => {
         document.body.appendChild(root);
 
         const originalInjectEverything = injector.inject.everything;
-        let originalConfig = { ...injector.config }; // shallow copy for later restoration
+        const originalConfig = { ...injector.config }; // shallow copy for later restoration
         // Make the injection function throw when called by observer callback
         injector.inject.everything = function () {
             throw new Error('boom');
