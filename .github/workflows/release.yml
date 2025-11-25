@@ -46,8 +46,8 @@ jobs:
 
             - name: Create tag and push
               if: ${{ steps.changes.outputs.code == 'true' }}
-              env:
-                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                env:
+                  TAG_NAME: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -141,8 +141,8 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
-                  release_name: Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  tag_name: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
+                  release_name: "Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
                   body: |-
                       Auto-generated release from workflow. Tag ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false

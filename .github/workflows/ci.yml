@@ -120,7 +120,7 @@ jobs:
             - name: Create tag and push
               if: steps.changes.outputs.code == 'true'
               env:
-                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  TAG_NAME: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -171,10 +171,10 @@ jobs:
               if: steps.changes.outputs.code == 'true'
               uses: actions/create-release@v1
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
-                  release_name: Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  tag_name: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
+                  release_name: "Release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
                   body: |-
                     Auto-generated release from workflow. Tag: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false
@@ -204,12 +204,12 @@ jobs:
               run: npm install
             - name: Build package
               run: npm run package
-            - name: Get short commit hash
-              id: vars
-              run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-            - name: Create tag and push
-              env:
-                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+              - name: Get short commit hash
+                id: vars
+                run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+              - name: Create tag and push
+                env:
+                  TAG_NAME: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -223,8 +223,8 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
-                  release_name: Manual release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  tag_name: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
+                  release_name: "Manual release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
                   body: |-
                     Manual release triggered via workflow_dispatch. Tag: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false

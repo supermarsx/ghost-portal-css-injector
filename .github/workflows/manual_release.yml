@@ -34,7 +34,7 @@ jobs:
                   echo "version=${version_no_v}" >> $GITHUB_OUTPUT
             - name: Create tag and push
               env:
-                  TAG_NAME: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                  TAG_NAME: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -47,9 +47,9 @@ jobs:
               uses: actions/create-release@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
-                  release_name: Manual release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}
+                with:
+                  tag_name: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
+                  release_name: "Manual release ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
                   body: |-
                     Manual release triggered via workflow_dispatch. Tag: ${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}.
                   draft: false
