@@ -51,13 +51,13 @@ jobs:
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                # Ensure tag does not have leading v; strip if needed
-                local_tag=${TAG_NAME#v}
-                git tag -a ${local_tag} -m "Release ${local_tag}" || echo "tag exists"
-                # set or update latest tag to point to this commit
+                  # Ensure tag does not have leading v; strip if needed
+                  local_tag=${TAG_NAME#v}
+                  git tag -a ${local_tag} -m "Release ${local_tag}" || echo "tag exists"
+                  # set or update latest tag to point to this commit
                   git tag -f latest ${local_tag} || true
-                git push origin --tags || echo "tags push failed"
-                git push --force origin latest || true
+                  git push origin --tags || echo "tags push failed"
+                  git push --force origin latest || true
 
             - name: Download coverage artifact
               if: ${{ steps.changes.outputs.code == 'true' }}
