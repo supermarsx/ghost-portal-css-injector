@@ -75,8 +75,28 @@ jobs:
                           echo "Failed to find tag ${local_tag} on origin after retries" >&2
                       fi
                   fi
+            - name: Check if release exists for the tag
+              id: check_release
+              uses: actions/github-script@v6
+              with:
+                script: |
+                    const tag = process.env.TAG_NAME;
+                    try {
+                      await github.rest.repos.getReleaseByTag({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        tag,
+                      });
+                      core.setOutput('release_exists', 'true');
+                    } catch (err) {
+                      if (err.status === 404) core.setOutput('release_exists', 'false');
+                      else throw err;
+                    }
+              env:
+                TAG_NAME: "${{ steps.set_tag.outputs.tag_name }}"
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             - name: Create GitHub release
-              if: steps.verify_tag.outputs.tag_exists == 'true'
+              if: ${{ steps.verify_tag.outputs.tag_exists == 'true' && steps.check_release.outputs.release_exists != 'true' }}
               uses: actions/create-release@v1
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
