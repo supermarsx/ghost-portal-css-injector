@@ -54,7 +54,29 @@ jobs:
                   git tag -f latest ${local_tag} || true
                   git push origin --tags || echo "tags push failed"
                   git push --force origin latest || true
+            - name: Verify tag exists on remote (and retry push if missing)
+              id: verify_tag
+              env:
+                  TAG_NAME: "${{ steps.set_tag.outputs.tag_name }}"
+              run: |
+                  local_tag=${TAG_NAME#v}
+                  git fetch --tags || true
+                  if git ls-remote --tags origin | grep -q "refs/tags/${local_tag}$"; then
+                      echo "tag_exists=true" >> $GITHUB_OUTPUT
+                  else
+                      echo "Tag ${local_tag} not found on origin; attempting to push..."
+                      # try pushing the tag again but don't fail the job on errors
+                      git push origin refs/tags/${local_tag} || true
+                      git fetch --tags || true
+                      if git ls-remote --tags origin | grep -q "refs/tags/${local_tag}$"; then
+                          echo "tag_exists=true" >> $GITHUB_OUTPUT
+                      else
+                          echo "tag_exists=false" >> $GITHUB_OUTPUT
+                          echo "Failed to find tag ${local_tag} on origin after retries" >&2
+                      fi
+                  fi
             - name: Create GitHub release
+              if: steps.verify_tag.outputs.tag_exists == 'true'
               uses: actions/create-release@v1
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,8 +88,9 @@ jobs:
                 draft: false
                 prerelease: false
             - name: Upload package to release
+              if: steps.verify_tag.outputs.tag_exists == 'true'
               uses: softprops/action-gh-release@v1
               with:
-                  files: '*.tgz'
+                files: '*.tgz'
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
