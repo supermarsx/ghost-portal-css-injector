@@ -169,6 +169,7 @@ jobs:
               with:
                   name: coverage-report
                   path: coverage
+              if-no-files-found: warn
             - name: Use Node.js for badge generation
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/setup-node@v4
@@ -180,7 +181,13 @@ jobs:
             - name: Generate coverage badge in release
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               run: |
-                  npm run coverage:badge
+                  if [ -d coverage ]; then
+                    npm run coverage:badge
+                  else
+                    echo "Coverage folder missing; running tests to generate coverage and badge"
+                    npm test
+                    npm run coverage:badge
+                  fi
             - name: Commit coverage badge
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               run: |
@@ -200,6 +207,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: npm-package
+              if-no-files-found: warn
             - name: Create GitHub release
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/create-release@v1

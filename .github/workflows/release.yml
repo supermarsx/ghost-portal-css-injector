@@ -88,6 +88,7 @@ jobs:
               with:
                   name: coverage-report
                   path: coverage
+              if-no-files-found: warn
 
             - name: Generate coverage badge
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
@@ -101,7 +102,14 @@ jobs:
 
             - name: Create badge file
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
-              run: npm run coverage:badge
+              run: |
+                  if [ -d coverage ]; then
+                    npm run coverage:badge
+                  else
+                    echo "Coverage folder missing; running tests to generate coverage and badge"
+                    npm test
+                    npm run coverage:badge
+                  fi
 
             - name: Commit coverage badge
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
@@ -123,6 +131,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: npm-package
+              if-no-files-found: warn
 
             - name: Prepare package artifact for publish
               if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
