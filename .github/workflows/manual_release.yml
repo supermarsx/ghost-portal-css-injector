@@ -95,22 +95,18 @@ jobs:
               env:
                 TAG_NAME: "${{ steps.set_tag.outputs.tag_name }}"
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            - name: Create GitHub release
-              if: ${{ steps.verify_tag.outputs.tag_exists == 'true' && steps.check_release.outputs.release_exists != 'true' }}
-              uses: actions/create-release@v1
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            # The `softprops/action-gh-release` action can create a release if it doesn't exist
+            # and will upload artifacts to it. We use it for the final step to create/update/upload.
+            - name: Create or update GitHub release and upload package
+              if: ${{ steps.verify_tag.outputs.tag_exists == 'true' }}
+              uses: softprops/action-gh-release@v1
               with:
+                files: '*.tgz'
                 tag_name: "${{ steps.set_tag.outputs.tag_name }}"
-                release_name: "Manual release ${{ steps.set_tag.outputs.tag_name }}"
+                name: "Manual release ${{ steps.set_tag.outputs.tag_name }}"
                 body: |-
                   Manual release triggered via workflow_dispatch. Tag: ${{ steps.set_tag.outputs.tag_name }}.
                 draft: false
                 prerelease: false
-            - name: Upload package to release
-              if: steps.verify_tag.outputs.tag_exists == 'true'
-              uses: softprops/action-gh-release@v1
-              with:
-                files: '*.tgz'
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
