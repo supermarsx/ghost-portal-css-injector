@@ -54,6 +54,35 @@ describe('Edge cases and uncovered branches', () => {
         );
     });
 
+    test('element.waitAll MutationObserver callback error is caught', async () => {
+        // Prepare DOM and ensure element.getAll works initially then fails on subsequent calls
+        document.body.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'target';
+
+        let first = true;
+        const originalGetAll = injector.element.getAll;
+        injector.element.getAll = function ({ selector }) {
+            if (first) {
+                first = false;
+                // initial call: return an empty NodeList to enter the observer
+                return document.querySelectorAll(selector);
+            }
+            // subsequent calls: simulate an error inside the mutation observer callback
+            throw new Error('boom');
+        };
+
+        try {
+            // call waitAll and mutate DOM to fire observer callback that will throw
+            const p = injector.element.waitAll({ selector: '.target', count: 1, timeout: 20 });
+            // trigger mutation so the observer callback runs and hits the error
+            document.body.appendChild(div);
+            await expect(p).rejects.toBeDefined();
+        } finally {
+            injector.element.getAll = originalGetAll;
+        }
+    });
+
     test('element.build.link uses version even when getFirst is null', () => {
         // Temporarily stub version.getFirst to return null
         const original = injector.version.getFirst;
@@ -153,6 +182,47 @@ describe('Edge cases and uncovered branches', () => {
         injector.observer.clear();
         expect(injector.config.observer.current).toBeNull();
         expect(injector.config.observer.tempObservers.length).toBe(0);
+    });
+
+    test('observer.setup mutation callback errors are caught and do not bubble', async () => {
+        // Create root element for observer setup
+        const root = document.createElement('div');
+        root.id = 'ghost-portal-root';
+        document.body.appendChild(root);
+
+        const originalInjectEverything = injector.inject.everything;
+        let originalConfig = { ...injector.config }; // shallow copy for later restoration
+        // Make the injection function throw when called by observer callback
+        injector.inject.everything = function () {
+            throw new Error('boom');
+        };
+
+        try {
+            // Set up the observer. It should return without throwing.
+            await injector.observer.setup();
+
+            // Append an iframe to the root; this triggers observer callback which will call inject.everything and throw
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('title', 'portal-test');
+            root.appendChild(iframe);
+
+            // wait briefly to allow the mutation observer to run
+            await new Promise((r) => setTimeout(r, 30));
+
+            // Ensure the observer stays configured and no unhandled exceptions propagated
+            expect(injector.config.observer.current).not.toBeNull();
+        } finally {
+            // restore
+            injector.inject.everything = originalInjectEverything;
+            try {
+                injector.observer.clear();
+            } catch (err) {
+                void err;
+            }
+            // cleanup root
+            document.body.removeChild(root);
+            injector.config = originalConfig;
+        }
     });
 
     test('element.count, countIframes and countFonts propagate errors when element.getAll throws', () => {

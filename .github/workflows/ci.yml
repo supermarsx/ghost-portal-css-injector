@@ -139,8 +139,19 @@ jobs:
                         - 'assets/**'
                         - '*.js'
 
+            - name: Check for prior tags
+              id: has_tags
+              run: |
+                git fetch --tags || true
+                tag_count=$(git tag | wc -l)
+                if [ "$tag_count" -eq 0 ]; then
+                  echo "no_tag=true" >> $GITHUB_OUTPUT
+                else
+                  echo "no_tag=false" >> $GITHUB_OUTPUT
+                fi
+
             - name: Create tag and push
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               env:
                   TAG_NAME: "${{ steps.set_tag.outputs.tag_name }}"
               run: |
@@ -153,25 +164,25 @@ jobs:
                   git push origin --tags || echo "tags push failed"
                   git push --force origin latest || true
             - name: Download coverage-report artifact
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/download-artifact@v4
               with:
                   name: coverage-report
                   path: coverage
             - name: Use Node.js for badge generation
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/setup-node@v4
               with:
                   node-version: '20'
             - name: Install dependencies for badge
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               run: npm install
             - name: Generate coverage badge in release
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               run: |
                   npm run coverage:badge
             - name: Commit coverage badge
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               run: |
                   if [ -f badges/coverage.svg ]; then
                     git add badges/coverage.svg || true
@@ -185,12 +196,12 @@ jobs:
                     fi
                   fi
             - name: Download package artifact
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/download-artifact@v4
               with:
                   name: npm-package
             - name: Create GitHub release
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: actions/create-release@v1
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -202,7 +213,7 @@ jobs:
                   draft: false
                   prerelease: false
             - name: Upload package to release
-              if: steps.changes.outputs.code == 'true'
+              if: ${{ steps.changes.outputs.code == 'true' || steps.has_tags.outputs.no_tag == 'true' }}
               uses: softprops/action-gh-release@v1
               with:
                   files: '*.tgz'
