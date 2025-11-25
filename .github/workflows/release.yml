@@ -46,7 +46,7 @@ jobs:
 
             - name: Create tag and push
               if: ${{ steps.changes.outputs.code == 'true' }}
-                env:
+              env:
                   TAG_NAME: "${{ steps.version.outputs.version != '' ? steps.version.outputs.version : steps.vars.outputs.short_sha }}"
               run: |
                   git config user.name "github-actions[bot]"
